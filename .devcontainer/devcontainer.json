@@ -1,0 +1,63 @@
+{
+    "name": "SystemRS Development",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    "remoteUser": "vscode",
+    "workspaceFolder": "/workspaces/systemrs",
+    "mounts": [
+        "source=systemrs-cargo-registry,target=/opt/cargo/registry,type=volume",
+        "source=systemrs-cargo-git,target=/opt/cargo/git,type=volume"
+    ],
+    "containerEnv": {
+        "GIT_EDITOR": "code --wait"
+    },
+    "remoteEnv": {
+        "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+    },
+    "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+    "postAttachCommand": "bash .devcontainer/scripts/post-attach.sh",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "rust-lang.rust-analyzer",
+                "tamasfe.even-better-toml",
+                "fill-labs.dependi",
+                "vadimcn.vscode-lldb",
+                "usernamehw.errorlens",
+                "eamodio.gitlens",
+                "EditorConfig.EditorConfig",
+                "Anthropic.claude-code",
+                "streetsidesoftware.code-spell-checker",
+                "mutantdino.resourcemonitor",
+                "MermaidChart.vscode-mermaid-chart"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "terminal.integrated.profiles.linux": {
+                    "bash": {
+                        "path": "/bin/bash",
+                        "args": [
+                            "-l"
+                        ]
+                    }
+                },
+                "[rust]": {
+                    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+                    "editor.formatOnSave": true
+                },
+                "rust-analyzer.check.command": "clippy",
+                "rust-analyzer.cargo.buildScripts.enable": true,
+                "files.watcherExclude": {
+                    "**/target/**": true,
+                    "**/external/**": true
+                },
+                "search.exclude": {
+                    "**/target": true,
+                    "**/external": true
+                }
+            }
+        }
+    }
+}
