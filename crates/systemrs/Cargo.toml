@@ -1,0 +1,20 @@
+[package]
+name = "systemrs"
+description = "SystemRS: a Rust, TLM-only equivalent of SystemC for transaction-level digital twins (facade)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+systemrs-diag.workspace = true
+systemrs-time.workspace = true
+systemrs-kernel.workspace = true
+systemrs-core.workspace = true
+systemrs-channels.workspace = true
+systemrs-tlm2.workspace = true
+
+[lints]
+workspace = true

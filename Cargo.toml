@@ -1,0 +1,79 @@
+# Workspace root (virtual manifest) for SystemRS.
+#
+# See `doc/systemrs-design.md` §10 for the full 14-crate plan. This workspace
+# implements the deterministic core and the TLM-2.0 LT path required to run the
+# two reference examples (`crates/systemrs-examples`): an incrementing counter
+# and a basic RV32I CPU hart. The interop (`-ffi`), tracing backends (`-trace`),
+# AT/PEQ utilities (`-tlm-utils`), proc-macros (`-macros`) and TLM-1 analysis
+# (`-tlm1`) crates from the design are deferred per the roadmap (§12, M4+).
+[workspace]
+resolver = "3"
+members = [
+    "crates/systemrs-diag",
+    "crates/systemrs-time",
+    "crates/systemrs-runtime",
+    "crates/systemrs-kernel",
+    "crates/systemrs-core",
+    "crates/systemrs-channels",
+    "crates/systemrs-tlm2",
+    "crates/systemrs",
+    "crates/systemrs-examples",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+license = "Apache-2.0"
+repository = "https://github.com/londey/systemrs"
+authors = ["Nicholas Londey <londey@gmail.com>"]
+
+[workspace.dependencies]
+# Internal crates (path + version per design §10.4).
+systemrs-diag = { path = "crates/systemrs-diag", version = "0.1.0" }
+systemrs-time = { path = "crates/systemrs-time", version = "0.1.0" }
+systemrs-runtime = { path = "crates/systemrs-runtime", version = "0.1.0" }
+systemrs-kernel = { path = "crates/systemrs-kernel", version = "0.1.0" }
+systemrs-core = { path = "crates/systemrs-core", version = "0.1.0" }
+systemrs-channels = { path = "crates/systemrs-channels", version = "0.1.0" }
+systemrs-tlm2 = { path = "crates/systemrs-tlm2", version = "0.1.0" }
+systemrs = { path = "crates/systemrs", version = "0.1.0" }
+
+# External crates, default-features off per the Rust skill.
+slotmap = { version = "1", default-features = false }
+# `unwind` is required so a suspended fiber (a thread parked at wait() when the
+# simulation ends) is force-unwound on drop, running its destructors.
+corosensei = { version = "0.3", default-features = false, features = [
+    "default-stack",
+    "unwind",
+] }
+thiserror = { version = "2", default-features = false }
+
+[workspace.lints.rust]
+missing_docs = "warn"
+unsafe_code = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Pedantic lints relaxed for this project (per the Rust skill's guidance).
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+enum_variant_names = "allow"
+# Numeric casts are pervasive and intentional in a u64-time / RV32I codebase.
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+cast_lossless = "allow"
+cast_precision_loss = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+doc_markdown = "allow"
+items_after_statements = "allow"
+struct_excessive_bools = "allow"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

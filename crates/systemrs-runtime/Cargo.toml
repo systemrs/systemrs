@@ -1,0 +1,15 @@
+[package]
+name = "systemrs-runtime"
+description = "Stackful coroutine backend for SystemRS SC_THREAD processes (corosensei)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+corosensei.workspace = true
+
+[lints]
+workspace = true

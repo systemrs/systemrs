@@ -1,0 +1,18 @@
+[package]
+name = "systemrs-kernel"
+description = "The SystemRS discrete-event kernel: three-phase delta-cycle scheduler, events, processes, arenas."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+systemrs-diag.workspace = true
+systemrs-time.workspace = true
+systemrs-runtime.workspace = true
+slotmap = { workspace = true, features = ["std"] }
+
+[lints]
+workspace = true

@@ -1,0 +1,28 @@
+# cargo-deny configuration. SystemRS is Apache-2.0 (matching SystemC's lineage)
+# and accepts only permissive licenses for its dependency tree.
+[graph]
+all-features = false
+
+[advisories]
+yanked = "warn"
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

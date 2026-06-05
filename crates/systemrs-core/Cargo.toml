@@ -1,0 +1,17 @@
+[package]
+name = "systemrs-core"
+description = "Module/elaboration ergonomics for SystemRS: process and sensitivity builders, lifecycle callbacks."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+systemrs-kernel.workspace = true
+systemrs-time.workspace = true
+systemrs-diag.workspace = true
+
+[lints]
+workspace = true

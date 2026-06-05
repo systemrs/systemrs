@@ -1,0 +1,20 @@
+[package]
+name = "systemrs-tlm2"
+description = "TLM-2.0 for SystemRS: generic payload, transport, phases, sockets, and a memory target."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+systemrs-kernel.workspace = true
+systemrs-core.workspace = true
+systemrs-channels.workspace = true
+systemrs-time.workspace = true
+systemrs-diag.workspace = true
+slotmap = { workspace = true, features = ["std"] }
+
+[lints]
+workspace = true

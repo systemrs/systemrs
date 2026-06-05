@@ -1,0 +1,18 @@
+[package]
+name = "systemrs-channels"
+description = "Primitive channels for SystemRS: Signal/Buffer/Fifo/Clock with evaluate-update determinism."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+systemrs-kernel.workspace = true
+systemrs-core.workspace = true
+systemrs-time.workspace = true
+systemrs-diag.workspace = true
+
+[lints]
+workspace = true

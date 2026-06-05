@@ -1,0 +1,24 @@
+[package]
+name = "systemrs-examples"
+description = "Runnable SystemRS examples: an incrementing counter and a basic RV32I CPU hart."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+systemrs.workspace = true
+
+[lints]
+workspace = true
+
+[[example]]
+name = "counter"
+path = "examples/counter.rs"
+
+[[example]]
+name = "rv32i_hart"
+path = "examples/rv32i_hart.rs"

@@ -1,0 +1,5 @@
+# Pin the toolchain channel. CI additionally exercises the MSRV leg (1.90) per
+# the design's conventions (doc/systemrs-design.md §10.4).
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
