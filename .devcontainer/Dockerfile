@@ -6,7 +6,7 @@
 #   - the cargo quality tools the project's checks rely on (deny, audit, nextest);
 #   - a C/C++ toolchain + CMake for the `cxx`-based SystemC interop
 #     (`systemrs-ffi`, built against external/systemc under the `cosim` feature);
-#   - Node.js + the Claude Code CLI.
+#   - the Claude Code CLI (native installer).
 #
 # It deliberately does NOT carry FPGA/USB programming tools, embedded
 # cross-compilation targets, or register-generation/datasheet tooling — none of
@@ -26,7 +26,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     ca-certificates \
-    gnupg \
     make \
     sudo \
     locales \
@@ -37,11 +36,6 @@ RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
-
-# Install Node.js 20.x LTS (required for the Claude Code CLI).
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/*
 
 # Install Rust via rustup into a shared location that is on PATH for every user.
 # A minimal profile keeps the image small; rustfmt + clippy are added explicitly
@@ -59,14 +53,15 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 RUN rustup toolchain install 1.90 --profile minimal \
     && rustup component add --toolchain 1.90 rustfmt clippy
 
+# Refresh toolchains to the latest patch/release so image rebuilds don't keep a
+# layer-cache-stale `stable`. (The 1.90 MSRV pin only moves within its patch series.)
+RUN rustup update
+
 # Cargo quality tools used by the build-verification workflow:
 #   cargo-deny  — license + advisory + duplicate-version gate (deny.toml)
 #   cargo-audit — RustSec vulnerability scanner
 #   cargo-nextest — fast test runner for the conformance/integration suites
 RUN cargo install --locked cargo-deny cargo-audit cargo-nextest
-
-# Install Claude Code CLI globally.
-RUN npm install -g @anthropic-ai/claude-code
 
 # Create non-root user for development (handle existing UID/GID 1000).
 ARG USERNAME=vscode
@@ -101,3 +96,10 @@ ENV CLAUDE_CONFIG_DIR=/workspaces/systemrs/.claude
 # Final user switch + workdir (matches workspaceFolder in devcontainer.json).
 USER ${USERNAME}
 WORKDIR /workspaces/systemrs
+
+# Install Claude Code via the official native installer. It bundles its own
+# runtime (no Node.js required) and installs into the dev user's ~/.local/bin,
+# which the user owns and can auto-update in place.
+ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
+RUN curl -fsSL https://claude.ai/install.sh | bash \
+    && claude --version
