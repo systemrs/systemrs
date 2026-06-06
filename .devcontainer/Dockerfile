@@ -19,11 +19,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Base build dependencies.
 #   build-essential + cmake + pkg-config back the `cc`/`cxx` crates and let us
 #   build the vendored SystemC reference (external/systemc) for co-simulation.
+#   openssh-client is a *Recommends* of git, so --no-install-recommends drops it;
+#   we add it explicitly so `git push` over an SSH remote can use VS Code's
+#   forwarded ssh-agent (SSH_AUTH_SOCK).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     pkg-config \
     git \
+    openssh-client \
     curl \
     ca-certificates \
     make \
