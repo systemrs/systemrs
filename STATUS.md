@@ -10,13 +10,13 @@ this file's **Status** column is the *as-built* reality.
 
 **Legend:** ✅ Done · 🟡 Partial · ⬜ Missing (planned, not built) · ⏸️ Deferred (intentionally post-MVP) · ❌ Dropped (explicitly out of scope, §4)
 
-**Build health (2026-06-06):** `cargo test --workspace` → **49 passed, 0 failed**; `fmt`/`clippy -D warnings`/`build --release`/`doc`/`deny`/`audit` all clean. 9 of 14 planned crates exist.
+**Build health (2026-06-06):** `cargo test --workspace` → **59 passed, 0 failed**; `fmt`/`clippy -D warnings`/`build --release`/`doc`/`deny`/`audit` all clean. 9 of 14 planned crates exist.
 
 **Feature tally (114 tracked, pre-M2 baseline):** ✅ 36 DONE  ·  🟡 17 PARTIAL  ·  ⬜ 39 MISSING  ·  ⏸️ 14 DEFERRED  ·  ❌ 8 DROPPED _(M2 rows below updated as Phase A lands)_
 
 ## Where we are
 
-M0 (delta loop) and M1 (process model) are **done and bit-faithful**; the M3 **LT TLM-2.0** slice is **done** (generic payload, pool MM, extensions, `b_transport`, `transport_dbg`, id-keyed sockets). **M2 (modules / hierarchy / ports / exports / elaboration) is now in progress** — Phase A (the `ObjectStore` foundation + kernel elaboration hooks) has landed; the elaboration driver, ports/exports, `cx.module`, and socket reconciliation are the remaining phases ([doc/plan-m2.md](doc/plan-m2.md)). M4 (AT/PEQ/quantum), M5 (observability/tracing/TLM-1), M6 (twin layer), M7+ and §11 interop are not started; their TLM-2 contract types exist only as inert trait-default stubs.
+M0 (delta loop) and M1 (process model) are **done and bit-faithful**; the M3 **LT TLM-2.0** slice is **done** (generic payload, pool MM, extensions, `b_transport`, `transport_dbg`, id-keyed sockets). **M2 (modules / hierarchy / ports / exports / elaboration) is now in progress** — Phase A (the `ObjectStore` foundation + kernel elaboration hooks) and Phase B (the generic `Port`/`Export` two-phase binding + `complete_binding`) have landed; the elaboration driver (M2-06/07), `cx.module` (M2-08), and socket reconciliation (M2-09) are the remaining phases ([doc/plan-m2.md](doc/plan-m2.md)). M4 (AT/PEQ/quantum), M5 (observability/tracing/TLM-1), M6 (twin layer), M7+ and §11 interop are not started; their TLM-2 contract types exist only as inert trait-default stubs.
 
 👉 **Next phase plan:** [doc/plan-m2.md](doc/plan-m2.md) — Milestone 2.
 
@@ -103,7 +103,7 @@ _M1 (§3.2, §4 Processes, §6a)_
 
 _M2 (§3.4, §3.5, §4, §6b)_
 
-> **M2 in progress** — Phase A landed (M2-01/02/03): `ObjectId` 4th key + elaboration/end-of-sim hooks in the kernel; the `ObjectStore` arena with naming/uniquification/implicit-root; and the four per-bucket elaborator registries + `object_kind()`. The elaboration *driver* (fixpoint + callbacks + `complete_binding`) and ports/exports/`cx.module`/sockets are the remaining phases. See [doc/plan-m2.md](doc/plan-m2.md).
+> **M2 in progress** — Phase A (M2-01/02/03) + Phase B (M2-04/05) landed: `ObjectId` 4th key + elaboration/end-of-sim hooks; the `ObjectStore` arena (naming/uniquification/implicit-root) + four per-bucket elaborator registries; and the generic `Interface`/`Port`/`Export` two-phase binding with `complete_binding` (depth-first flatten + port-policy cardinality). The elaboration *driver* (M2-06/07), `cx.module` (M2-08), typestate (M2-10), macro (M2-11), and socket reconciliation (M2-09) are the remaining phases. See [doc/plan-m2.md](doc/plan-m2.md).
 
 | | Feature | Decision | Design | Evidence / Notes |
 |---|---|---|---|---|
@@ -112,9 +112,9 @@ _M2 (§3.4, §3.5, §4, §6b)_
 | ✅ | Object hierarchy + naming + uniqueness | REPLICATE | §4 Modules; §6b | M2-02: `core/object.rs` `ObjectStore` (`SlotMap<ObjectId, ObjectMeta>` + name table + scope stack + implicit root); dot-joined unique names, sanitisation, deterministic suffixing. 9 unit tests. |
 | ⬜ | sc_module_name LIFO-stack -> cx.module(name, \|m\| {..}) scope closures | DROP mechanism, REPLICATE outcome | §4 Modules | Scope stack (`push_scope`/`pop_scope`) exists in `ObjectStore`; the `cx.module` closure + `Builder<M>` are M2-08. |
 | 🟡 | Orphan-children-to-root-on-drop via arena re-parent | REPLICATE | §4 Modules | M2-02: `ObjectStore::reparent_children_to_root` (pure-id reparent) + unit test present; full destruction-order integration deferred (§12 M7+). |
-| ⬜ | Interface/port/export + two-phase deferred bind + complete_binding | REPLICATE | §4 Ports; §12 M2 | No Port/Export/Interface types yet (M2-04/05). TLM sockets still bind eagerly via the bespoke registry. |
-| ⬜ | Multiports + port-policy counting | REPLICATE | §4 Ports | Planned M2-04/05 (`PortPolicy`). |
-| ⬜ | Hierarchical port-to-port binding | REPLICATE | §4 Ports; §12 M2 | Planned M2-05 (`complete_binding` depth-first flatten). |
+| 🟡 | Interface/port/export + two-phase deferred bind + complete_binding | REPLICATE | §4 Ports; §12 M2 | M2-04/05: `channels/{interface,port,export,binding}.rs` — `Port<IF>`/`Export<IF>` Copy handles, id-keyed `PortRegistry`, two-phase `record` + `complete` (idempotent, cycle-guarded). 10 unit tests. Not yet auto-driven by the elaboration driver (M2-06) or used by sockets (M2-09). |
+| ✅ | Multiports + port-policy counting | REPLICATE | §4 Ports | M2-04/05: `PortPolicy` (`OneOrMore`/`AllBound`/`ZeroOrMore`) enforced at end of `complete`; multiport flatten preserves order. Tested. |
+| ✅ | Hierarchical port-to-port binding | REPLICATE | §4 Ports; §12 M2 | M2-05: `complete` flattens parent forwards depth-first (borrow-safe id-threading); port→parent-port and port→export chains tested incl. 3-deep. |
 | 🟡 | Attributes (sc_attribute<T>) / AttributeStore | DEFER | §4 Modules; §6b | M2-02: `AttributeStore` type present (`core/attribute.rs`) on `ObjectMeta`; lazy get/set bodies are M2-12. |
 
 ### M3 — Primitive channels + first end-to-end LT transaction

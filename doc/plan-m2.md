@@ -8,9 +8,13 @@
 > **Decisions taken** (2026-06-06): full scope (incl. the `Kernel<Building/Running>`
 > typestate M2-10 and the `#[module]` macro M2-11); existing counter/rv32i examples
 > **stay on the flat `Sim` path** as a regression gate (a new platform example exercises
-> the hierarchy). **Phase A done** — M2-01 (✅ `ObjectId` + kernel hooks), M2-02 (✅
-> `ObjectStore`), M2-03 (✅ per-bucket registries); `cargo test` 49 green, full skill
-> sweep clean. Next: Phase B (M2-04 `Interface`/`Port`/`Export`).
+> the hierarchy).
+>
+> **Progress:** **Phase A done** — M2-01 (✅ `ObjectId` + kernel hooks), M2-02 (✅
+> `ObjectStore`), M2-03 (✅ per-bucket registries). **Phase B done** — M2-04 (✅
+> `Interface`/`Port`/`Export` + two-phase record), M2-05 (✅ `complete_binding` flatten +
+> policy, borrow-safe). `cargo test` **59 green**, full skill sweep clean. Next: **Phase C
+> (M2-06 `ElaborationDriver` + M2-07 wire into `run_until`)** — the first schedule-touching step.
 
 ## Why M2 next
 

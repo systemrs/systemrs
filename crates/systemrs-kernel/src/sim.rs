@@ -63,6 +63,15 @@ impl Sim {
         self.inner.borrow().delta_count
     }
 
+    /// Returns the current scheduler phase.
+    ///
+    /// Before the simulation starts this is [`Phase::Build`] (the elaboration
+    /// window); it advances to [`Phase::Evaluate`]/`Update`/`Notify` once running.
+    /// Binding APIs gate on `phase() == Phase::Build` to reject binding after start.
+    pub fn phase(&self) -> Phase {
+        self.inner.borrow().phase
+    }
+
     /// Returns an elaboration-time [`Ctx`] (e.g. to seed channel state).
     pub fn ctx(&self) -> Ctx {
         Ctx::from_inner(Rc::clone(&self.inner))
