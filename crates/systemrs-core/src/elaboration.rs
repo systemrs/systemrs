@@ -73,14 +73,18 @@ pub(crate) fn drive(ctx: &Ctx) -> Result<(), ReportError> {
 
     // (2) end_of_elaboration — ports/exports complete their binding here.
     for kind in BUCKET_ORDER {
-        for elab in store.borrow().all_elaborators(kind) {
+        // Bind to a local so the store borrow is released before the callbacks run
+        // (the borrow-release discipline; a callback may re-enter the store).
+        let elabs = store.borrow().all_elaborators(kind);
+        for elab in elabs {
             elab.borrow_mut().end_of_elaboration(ctx);
         }
     }
 
     // (3) start_of_simulation.
     for kind in BUCKET_ORDER {
-        for elab in store.borrow().all_elaborators(kind) {
+        let elabs = store.borrow().all_elaborators(kind);
+        for elab in elabs {
             elab.borrow_mut().start_of_simulation(ctx);
         }
     }
@@ -100,7 +104,8 @@ pub(crate) fn end_of_simulation(ctx: &Ctx) {
         return;
     };
     for kind in BUCKET_ORDER {
-        for elab in store.borrow().all_elaborators(kind) {
+        let elabs = store.borrow().all_elaborators(kind);
+        for elab in elabs {
             elab.borrow_mut().end_of_simulation(ctx);
         }
     }

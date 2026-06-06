@@ -182,6 +182,17 @@ fn read_honours_byte_enables() {
     assert_eq!(*result.lock().expect("lock"), [0xEF, 0xFF, 0xAD, 0xFF]);
 }
 
+/// Verifies an unbound initiator socket fails its `OneOrMore` port policy at the
+/// elaboration barrier (a clean FATAL), rather than silently at first transport.
+#[test]
+#[should_panic(expected = "policy")]
+fn unbound_initiator_socket_fails_at_elaboration() {
+    let sim = Sim::new();
+    let _target = TargetSocket::new(&sim, "mem");
+    let _isock = InitiatorSocket::new(&sim, "i"); // created but never bound
+    sim.run_until(SimTime::ZERO); // elaboration → complete_binding → OneOrMore(0) → FATAL
+}
+
 /// Verifies the transaction pool recycles a payload and resets stale fields.
 #[test]
 fn txn_pool_recycles_and_resets() {

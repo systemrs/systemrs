@@ -32,6 +32,12 @@ impl<IF> Clone for Export<IF> {
 
 impl<IF> Copy for Export<IF> {}
 
+impl<IF> core::fmt::Debug for Export<IF> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Export").field("id", &self.id).finish()
+    }
+}
+
 impl<IF> Export<IF> {
     /// Creates an unbound export (policy [`PortPolicy::OneOrMore`]) in the current scope.
     ///

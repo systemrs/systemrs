@@ -337,6 +337,24 @@ pub(crate) fn resolved(reg: &RefCell<PortRegistry>, id: ObjectId) -> Vec<ObjectI
     }
 }
 
+/// Returns an endpoint's resolved interface ids from a running [`Ctx`].
+///
+/// Used during simulation (e.g. by a socket's `b_transport`) to read a binding
+/// resolved at the elaboration barrier; the registry is reached as a kernel service.
+///
+/// # Arguments
+///
+/// * `ctx` - The running kernel handle.
+/// * `id` - The endpoint id.
+///
+/// # Returns
+///
+/// The resolved interface ids, or empty if the registry/endpoint is absent.
+pub(crate) fn resolved_ctx(ctx: &Ctx, id: ObjectId) -> Vec<ObjectId> {
+    ctx.try_service::<RefCell<PortRegistry>>()
+        .map_or_else(Vec::new, |reg| resolved(&reg, id))
+}
+
 /// The elaborator that drives an endpoint's [`complete`] at `end_of_elaboration`.
 ///
 /// Registered into the object store's port/export bucket; the M2-06 elaboration

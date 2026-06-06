@@ -231,8 +231,8 @@ mod tests {
     use systemrs_time::SimTime;
 
     use super::{Builder, Module, module, module_with};
-    use crate::object::{ObjectKind, store};
     use crate::Elaborate;
+    use crate::object::{ObjectKind, store};
 
     /// EC1: nested modules and their child processes get unique dot-joined names.
     #[test]

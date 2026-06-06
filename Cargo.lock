@@ -161,7 +161,6 @@ dependencies = [
 name = "systemrs-tlm2"
 version = "0.1.0"
 dependencies = [
- "slotmap",
  "systemrs-channels",
  "systemrs-core",
  "systemrs-diag",

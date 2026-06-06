@@ -1,36 +1,38 @@
-//! Sockets: the user-facing connection primitive, with the crossed bind cycle
-//! neutralized by a kernel-owned registry of `Copy` ids.
+//! Sockets, reconciled onto the generic two-phase binding (`doc/systemrs-design.md`
+//! §6d): an [`InitiatorSocket`] *is* a forward [`Port`], a [`TargetSocket`] is the
+//! interface-providing leaf its `b_transport`/`transport_dbg` closures hang off.
 //!
-//! A literal `Rc` cycle between initiator and target would leak; the resolution is
-//! a kernel-owned **socket registry with id handles** — a cycle of indices is not a
-//! memory-management cycle (`doc/systemrs-design.md` §6d). The convenience-socket
-//! ergonomics register **boxed closures**, replacing SystemC's `void*` trampoline.
+//! `bind` is now **deferred** — it records a bind request resolved at the
+//! elaboration barrier by the port's `complete_binding`, rather than wiring the
+//! routing immediately. An unbound initiator therefore fails its `OneOrMore` port
+//! policy at elaboration (a clean FATAL at the barrier), not at first transport.
+//!
+//! The closure registry (a `Sim` service) is kept as **resolved-interface storage**:
+//! after binding resolves the initiator's port to the target's object id, transport
+//! looks the closure up by that id. The crossed backward path (`Port<BwTransport>`,
+//! the double-bind, `nb_transport_bw`) is **out of scope for Milestone 2** — only
+//! the forward LT path is modelled here; the backward path lands in M4. Likewise the
+//! target-side *export* hierarchy (passthrough/multi sockets) is deferred.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
-use slotmap::{SecondaryMap, SlotMap};
-use systemrs_kernel::{Ctx, Sim};
+use systemrs_channels::{Port, PortPolicy};
+use systemrs_core::{ObjectKind, store};
+use systemrs_kernel::{Ctx, ObjectId, Sim};
 use systemrs_time::SimTime;
 
 use crate::gp::GenericPayload;
-
-slotmap::new_key_type! {
-    /// Identifies an initiator socket in the registry.
-    pub struct InitiatorId;
-
-    /// Identifies a target socket in the registry.
-    pub struct TargetId;
-}
+use crate::protocol::BaseProtocol;
 
 /// A registered blocking-transport callback.
 ///
-/// Stored as a shared `Rc<dyn Fn>` (not a taken-out `FnMut`) so that
-/// `b_transport` *clones* the handle and calls it without removing it from the
-/// registry. This makes the call re-entrancy-safe (a second initiator may legally
-/// enter the same target while the first is parked at a `wait()` inside
-/// `b_transport`) and unwind-safe (no slot is left empty if the callback panics).
-/// Targets that need mutable state use interior mutability (e.g. `RefCell`).
+/// Stored as a shared `Rc<dyn Fn>` so `b_transport` *clones* the handle and calls
+/// it without removing it from the registry — re-entrancy-safe (a second initiator
+/// may legally enter the same target while the first is parked at a `wait()` inside
+/// `b_transport`) and unwind-safe. Targets that need mutable state use interior
+/// mutability (e.g. `RefCell`).
 type BTransportFn = Rc<dyn Fn(&Ctx, &mut GenericPayload, &mut SimTime)>;
 
 /// A registered debug-transport callback (shared, re-entrancy-safe).
@@ -46,25 +48,17 @@ struct TargetEntry {
     transport_dbg: Option<DbgFn>,
 }
 
-/// The kernel-owned socket registry (a [`Sim`] service).
-pub(crate) struct SocketRegistry {
-    /// Target sockets and their callbacks.
-    targets: SlotMap<TargetId, TargetEntry>,
-
-    /// Allocated initiator socket ids.
-    initiators: SlotMap<InitiatorId, ()>,
-
-    /// Forward routing: initiator → bound target.
-    bindings: SecondaryMap<InitiatorId, TargetId>,
+/// The kernel-owned closure store, keyed by each target socket's object id.
+struct SocketRegistry {
+    /// Target object id → its callbacks.
+    targets: HashMap<ObjectId, TargetEntry>,
 }
 
 impl SocketRegistry {
     /// Creates an empty registry.
     fn new() -> Self {
         SocketRegistry {
-            targets: SlotMap::with_key(),
-            initiators: SlotMap::with_key(),
-            bindings: SecondaryMap::new(),
+            targets: HashMap::new(),
         }
     }
 }
@@ -87,49 +81,66 @@ fn registry_from_ctx(ctx: &Ctx) -> Rc<RefCell<SocketRegistry>> {
 
 /// An initiator socket: the forward end of a transaction path.
 ///
-/// The handle is a `Copy`/`Send` id, so it can be captured by an `SC_THREAD` body
-/// (which must be `Send`) and used to call `b_transport` from any call depth.
+/// A `Copy` handle wrapping a forward [`Port`], so it can be captured by an
+/// `SC_THREAD` body and used to call `b_transport` from any call depth.
 #[derive(Debug, Clone, Copy)]
 pub struct InitiatorSocket {
-    /// The registry id.
-    id: InitiatorId,
+    /// The forward port; resolves to the bound target's object id at elaboration.
+    port: Port<BaseProtocol>,
 }
 
 impl InitiatorSocket {
-    /// Creates an unbound initiator socket.
+    /// Creates an unbound initiator socket (forward port, `OneOrMore` policy).
     ///
     /// # Arguments
     ///
     /// * `sim` - The simulation under construction.
-    /// * `name` - A hierarchical name (reserved for a future name registry).
+    /// * `name` - A hierarchical name (registered under the current scope).
     ///
     /// # Returns
     ///
     /// A `Copy` handle to the new socket.
     pub fn new(sim: &Sim, name: &str) -> Self {
-        let _ = name;
-        let id = registry(sim).borrow_mut().initiators.insert(());
-        InitiatorSocket { id }
+        InitiatorSocket {
+            port: Port::with_policy(sim, name, PortPolicy::OneOrMore),
+        }
     }
 
-    /// Binds this initiator to `target` (the crossed forward routing).
+    /// Binds this initiator to `target` (deferred; resolved at the barrier).
     ///
     /// # Arguments
     ///
     /// * `sim` - The simulation under construction.
     /// * `target` - The target socket to bind to.
+    ///
+    /// # Panics
+    ///
+    /// Aborts (FATAL) if called after the simulation has started.
     pub fn bind(&self, sim: &Sim, target: &TargetSocket) {
-        registry(sim)
-            .borrow_mut()
-            .bindings
-            .insert(self.id, target.id);
+        if let Err(e) = self.port.bind_channel(sim, target.id) {
+            systemrs_diag::report_fatal("SYSTEMRS/TLM2", &format!("{e}"));
+        }
+    }
+
+    /// Resolves the bound target's object id from a running [`Ctx`].
+    ///
+    /// # Panics
+    ///
+    /// Aborts (FATAL) if the socket is unbound or its binding did not resolve.
+    fn resolve_target(self, ctx: &Ctx) -> ObjectId {
+        *self.port.resolved_in_ctx(ctx).first().unwrap_or_else(|| {
+            systemrs_diag::report_fatal(
+                "SYSTEMRS/TLM2",
+                "b_transport on an unbound or unresolved socket",
+            )
+        })
     }
 
     /// Performs a blocking transport to the bound target.
     ///
-    /// The target callback may call `ctx.wait` (e.g. to model access latency) —
-    /// demonstrating the design's central property: `wait()` is reachable from
-    /// inside `b_transport` (`doc/systemrs-design.md` §6a, §6d).
+    /// The target callback may call `ctx.wait` (e.g. to model access latency),
+    /// demonstrating that `wait()` is reachable from inside `b_transport`
+    /// (`doc/systemrs-design.md` §6a, §6d).
     ///
     /// # Arguments
     ///
@@ -139,24 +150,17 @@ impl InitiatorSocket {
     ///
     /// # Panics
     ///
-    /// Panics (FATAL) if the socket is unbound or the target has no `b_transport`
-    /// callback.
+    /// Aborts (FATAL) if the socket is unresolved or the target has no `b_transport`.
     pub fn b_transport(&self, ctx: &Ctx, txn: &mut GenericPayload, delay: &mut SimTime) {
-        let registry = registry_from_ctx(ctx);
-
-        // Clone the shared callback handle without holding the registry borrow
-        // across the call (the callback may re-enter the kernel via wait()).
-        let callback = {
-            let reg = registry.borrow();
-            let target_id = reg.bindings.get(self.id).copied().unwrap_or_else(|| {
-                systemrs_diag::report_fatal("SYSTEMRS/TLM2", "b_transport on an unbound socket")
-            });
-            reg.targets[target_id].b_transport.clone()
-        };
+        let target = self.resolve_target(ctx);
+        let callback = registry_from_ctx(ctx)
+            .borrow()
+            .targets
+            .get(&target)
+            .and_then(|t| t.b_transport.clone());
         let callback = callback.unwrap_or_else(|| {
             systemrs_diag::report_fatal("SYSTEMRS/TLM2", "target has no b_transport callback")
         });
-
         callback(ctx, txn, delay);
     }
 
@@ -164,21 +168,21 @@ impl InitiatorSocket {
     ///
     /// # Arguments
     ///
-    /// * `ctx` - The kernel handle (used only to reach the registry).
+    /// * `ctx` - The kernel handle.
     /// * `txn` - The transaction payload to service.
     ///
     /// # Returns
     ///
-    /// The number of bytes serviced (0 if no debug callback is registered).
+    /// The number of bytes serviced (0 if unbound or no debug callback registered).
     pub fn transport_dbg(&self, ctx: &Ctx, txn: &mut GenericPayload) -> u32 {
-        let registry = registry_from_ctx(ctx);
-        let callback = {
-            let reg = registry.borrow();
-            let Some(target_id) = reg.bindings.get(self.id).copied() else {
-                return 0;
-            };
-            reg.targets[target_id].transport_dbg.clone()
+        let Some(&target) = self.port.resolved_in_ctx(ctx).first() else {
+            return 0;
         };
+        let callback = registry_from_ctx(ctx)
+            .borrow()
+            .targets
+            .get(&target)
+            .and_then(|t| t.transport_dbg.clone());
         match callback {
             Some(callback) => callback(txn),
             None => 0,
@@ -186,31 +190,40 @@ impl InitiatorSocket {
     }
 }
 
-/// A target socket: the receiving end of a transaction path.
+/// A target socket: the receiving end of a transaction path (the interface leaf).
 #[derive(Debug, Clone, Copy)]
 pub struct TargetSocket {
-    /// The registry id.
-    id: TargetId,
+    /// The target's object id; the key for its registered callbacks and the
+    /// interface id an initiator's port resolves to.
+    id: ObjectId,
 }
 
 impl TargetSocket {
-    /// Creates a target socket with no callbacks yet.
+    /// Creates a target socket with no callbacks yet, registered under the current
+    /// scope.
     ///
     /// # Arguments
     ///
     /// * `sim` - The simulation under construction.
-    /// * `name` - A hierarchical name (reserved for a future name registry).
+    /// * `name` - A hierarchical name.
     ///
     /// # Returns
     ///
     /// A `Copy` handle to the new socket.
     pub fn new(sim: &Sim, name: &str) -> Self {
-        let _ = name;
-        let id = registry(sim)
+        let store = store(sim);
+        let parent = store.borrow().current_scope();
+        let id = store.borrow_mut().insert(parent, name, ObjectKind::Socket);
+        registry(sim)
             .borrow_mut()
             .targets
-            .insert(TargetEntry::default());
+            .insert(id, TargetEntry::default());
         TargetSocket { id }
+    }
+
+    /// Returns this target socket's object id (the interface id initiators resolve to).
+    pub fn id(&self) -> ObjectId {
+        self.id
     }
 
     /// Registers the blocking-transport callback (a convenience-socket binding).
@@ -224,7 +237,12 @@ impl TargetSocket {
     where
         F: Fn(&Ctx, &mut GenericPayload, &mut SimTime) + 'static,
     {
-        registry(sim).borrow_mut().targets[self.id].b_transport = Some(Rc::new(callback));
+        registry(sim)
+            .borrow_mut()
+            .targets
+            .entry(self.id)
+            .or_default()
+            .b_transport = Some(Rc::new(callback));
     }
 
     /// Registers the debug-transport callback.
@@ -237,6 +255,11 @@ impl TargetSocket {
     where
         F: Fn(&mut GenericPayload) -> u32 + 'static,
     {
-        registry(sim).borrow_mut().targets[self.id].transport_dbg = Some(Rc::new(callback));
+        registry(sim)
+            .borrow_mut()
+            .targets
+            .entry(self.id)
+            .or_default()
+            .transport_dbg = Some(Rc::new(callback));
     }
 }

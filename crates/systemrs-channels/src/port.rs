@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 
 use systemrs_core::ObjectKind;
 use systemrs_diag::ReportError;
-use systemrs_kernel::{ObjectId, Sim};
+use systemrs_kernel::{Ctx, ObjectId, Sim};
 
 use crate::binding::{self, BindElem, PortPolicy};
 use crate::export::Export;
@@ -32,6 +32,12 @@ impl<IF> Clone for Port<IF> {
 }
 
 impl<IF> Copy for Port<IF> {}
+
+impl<IF> core::fmt::Debug for Port<IF> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Port").field("id", &self.id).finish()
+    }
+}
 
 impl<IF> Port<IF> {
     /// Creates an unbound port (policy [`PortPolicy::OneOrMore`]) in the current scope.
@@ -163,5 +169,19 @@ impl<IF> Port<IF> {
     /// A clone of the resolved id set.
     pub fn resolved(&self, sim: &Sim) -> Vec<ObjectId> {
         binding::resolved(&binding::port_registry(sim), self.id)
+    }
+
+    /// Returns this port's resolved interface ids during simulation, from a running
+    /// [`Ctx`] (the binding is resolved once at the elaboration barrier).
+    ///
+    /// # Arguments
+    ///
+    /// * `ctx` - The running kernel handle.
+    ///
+    /// # Returns
+    ///
+    /// The resolved interface id set (empty if unbound/unresolved).
+    pub fn resolved_in_ctx(&self, ctx: &Ctx) -> Vec<ObjectId> {
+        binding::resolved_ctx(ctx, self.id)
     }
 }

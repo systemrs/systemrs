@@ -20,8 +20,11 @@
 > `Kernel<Building/Running>` typestate front door — compile-time bind-after-start guard;
 > `systemrs-macros` + `#[module]` proc-macro, path-qualified, facade-routed test). `cargo test`
 > **70 green**, full skill sweep clean; `systemrs-macros` is the 10th crate.
-> Next: **Phase E** (M2-09 reconcile TLM sockets onto a fw `Port`+`Export` pair), then
-> **Phase F** (M2-12 AttributeStore · M2-13 platform example proving the 7 exit criteria · M2-14 facade+sweep).
+> **Phase E** ✅ M2-09 (TLM sockets reconciled onto the generic forward `Port`: deferred bind
+> resolved at the barrier, unbound socket → FATAL; closure registry kept as resolved storage;
+> rv32i bit-identical). `cargo test` **71 green**, full skill sweep clean.
+> Next: **Phase F** (M2-12 AttributeStore get/set bodies · M2-13 two-level platform example
+> proving the 7 exit criteria · M2-14 facade re-exports + final consolidation sweep).
 
 ## Why M2 next
 
