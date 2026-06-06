@@ -18,13 +18,15 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use systemrs_channels::{Port, PortPolicy};
+use systemrs_channels::{Export, Port, PortPolicy};
 use systemrs_core::{ObjectKind, store};
 use systemrs_kernel::{Ctx, ObjectId, Sim};
 use systemrs_time::SimTime;
 
 use crate::gp::GenericPayload;
-use crate::protocol::BaseProtocol;
+use crate::mm::Txn;
+use crate::phase::{Phase, TlmSync};
+use crate::protocol::{BaseProtocol, BwBaseProtocol};
 
 /// A registered blocking-transport callback.
 ///
@@ -38,20 +40,41 @@ type BTransportFn = Rc<dyn Fn(&Ctx, &mut GenericPayload, &mut SimTime)>;
 /// A registered debug-transport callback (shared, re-entrancy-safe).
 type DbgFn = Rc<dyn Fn(&mut GenericPayload) -> u32>;
 
+/// A registered non-blocking transport callback (forward *or* backward).
+///
+/// Takes `&Txn` (`&Rc<RefCell<GenericPayload>>`) — the AT aliasing rule — not a
+/// `&mut GenericPayload`, because the parked transaction is shared across phases.
+type NbFn = Rc<dyn Fn(&Ctx, &Txn, Phase, &mut SimTime) -> TlmSync>;
+
 /// The callbacks a target socket exposes.
 #[derive(Default)]
 struct TargetEntry {
-    /// The blocking-transport callback, if registered.
+    /// The blocking-transport (LT) callback, if registered.
     b_transport: Option<BTransportFn>,
+
+    /// The forward non-blocking (AT) callback, if registered.
+    nb_transport_fw: Option<NbFn>,
 
     /// The debug-transport callback, if registered.
     transport_dbg: Option<DbgFn>,
 }
 
-/// The kernel-owned closure store, keyed by each target socket's object id.
+/// The callbacks an initiator socket exposes on the backward (AT) path.
+#[derive(Default)]
+struct InitiatorEntry {
+    /// The backward non-blocking (AT) callback, if registered.
+    nb_transport_bw: Option<NbFn>,
+}
+
+/// The kernel-owned closure store.
 struct SocketRegistry {
-    /// Target object id → its callbacks.
+    /// Target object id → its forward callbacks.
     targets: HashMap<ObjectId, TargetEntry>,
+
+    /// Initiator `bw_export` object id → its backward callback. Keyed by the
+    /// `bw_export` id because an [`InitiatorSocket`] has no own id; that id is the
+    /// only one a target can resolve via its `bw_port`.
+    initiators: HashMap<ObjectId, InitiatorEntry>,
 }
 
 impl SocketRegistry {
@@ -59,6 +82,7 @@ impl SocketRegistry {
     fn new() -> Self {
         SocketRegistry {
             targets: HashMap::new(),
+            initiators: HashMap::new(),
         }
     }
 }
@@ -87,6 +111,11 @@ fn registry_from_ctx(ctx: &Ctx) -> Rc<RefCell<SocketRegistry>> {
 pub struct InitiatorSocket {
     /// The forward port; resolves to the bound target's object id at elaboration.
     port: Port<BaseProtocol>,
+
+    /// The backward export; its object id keys this initiator's `nb_transport_bw`
+    /// callback and is what a bound target's `bw_port` resolves to (`ZeroOrMore`, so
+    /// a pure-LT model that never uses the AT path still elaborates).
+    bw_export: Export<BwBaseProtocol>,
 }
 
 impl InitiatorSocket {
@@ -103,10 +132,21 @@ impl InitiatorSocket {
     pub fn new(sim: &Sim, name: &str) -> Self {
         InitiatorSocket {
             port: Port::with_policy(sim, name, PortPolicy::OneOrMore),
+            bw_export: Export::with_policy(sim, &format!("{name}.bw"), PortPolicy::ZeroOrMore),
         }
     }
 
+    /// Returns the backward-export object id (the key for this initiator's
+    /// `nb_transport_bw` callback).
+    pub fn bw_id(&self) -> ObjectId {
+        self.bw_export.id()
+    }
+
     /// Binds this initiator to `target` (deferred; resolved at the barrier).
+    ///
+    /// Records the crossed double-bind: the forward path (`self.port` → `target`) and
+    /// the backward path (`target.bw_port` → this initiator's `bw_export`), so the AT
+    /// `nb_transport_bw` can route from the target back to this initiator.
     ///
     /// # Arguments
     ///
@@ -118,6 +158,11 @@ impl InitiatorSocket {
     /// Aborts (FATAL) if called after the simulation has started.
     pub fn bind(&self, sim: &Sim, target: &TargetSocket) {
         if let Err(e) = self.port.bind_channel(sim, target.id) {
+            systemrs_diag::report_fatal("SYSTEMRS/TLM2", &format!("{e}"));
+        }
+        // Backward (target → initiator) crossed bind: the target's bw_port resolves
+        // to this initiator's bw_export id.
+        if let Err(e) = target.bw_port.bind_channel(sim, self.bw_export.id()) {
             systemrs_diag::report_fatal("SYSTEMRS/TLM2", &format!("{e}"));
         }
     }
@@ -188,6 +233,60 @@ impl InitiatorSocket {
             None => 0,
         }
     }
+
+    /// Forward non-blocking transport to the bound target (the AT request path).
+    ///
+    /// # Arguments
+    ///
+    /// * `ctx` - The kernel handle.
+    /// * `txn` - The shared transaction handle.
+    /// * `phase` - The current phase.
+    /// * `delay` - The timing annotation.
+    ///
+    /// # Returns
+    ///
+    /// The target's [`TlmSync`] (or [`TlmSync::Accepted`] if it has no nb callback).
+    pub fn nb_transport_fw(
+        &self,
+        ctx: &Ctx,
+        txn: &Txn,
+        phase: Phase,
+        delay: &mut SimTime,
+    ) -> TlmSync {
+        let target = self.resolve_target(ctx);
+        let callback = registry_from_ctx(ctx)
+            .borrow()
+            .targets
+            .get(&target)
+            .and_then(|t| t.nb_transport_fw.clone());
+        match callback {
+            Some(callback) => callback(ctx, txn, phase, delay),
+            None => TlmSync::Accepted,
+        }
+    }
+
+    /// Registers this initiator's backward (response-path) non-blocking callback.
+    ///
+    /// The target reaches it by resolving its `bw_port` to this initiator's
+    /// `bw_export` id (the registry key).
+    ///
+    /// # Arguments
+    ///
+    /// * `sim` - The simulation under construction.
+    /// * `callback` - The `nb_transport_bw` implementation.
+    pub fn register_nb_transport_bw<F>(&self, sim: &Sim, callback: F)
+    where
+        F: Fn(&Ctx, &Txn, Phase, &mut SimTime) -> TlmSync + 'static,
+    {
+        let reg = registry(sim);
+        let mut reg = reg.borrow_mut();
+        let entry = reg.initiators.entry(self.bw_export.id()).or_default();
+        debug_assert!(
+            entry.nb_transport_bw.is_none(),
+            "nb_transport_bw already registered on this initiator socket"
+        );
+        entry.nb_transport_bw = Some(Rc::new(callback));
+    }
 }
 
 /// A target socket: the receiving end of a transaction path (the interface leaf).
@@ -196,6 +295,11 @@ pub struct TargetSocket {
     /// The target's object id; the key for its registered callbacks and the
     /// interface id an initiator's port resolves to.
     id: ObjectId,
+
+    /// The backward port (the response call path target → initiator); resolves to
+    /// the bound initiator's `bw_export` id. `ZeroOrMore`, so an unbound (pure-LT)
+    /// target still elaborates.
+    bw_port: Port<BwBaseProtocol>,
 }
 
 impl TargetSocket {
@@ -218,7 +322,8 @@ impl TargetSocket {
             .borrow_mut()
             .targets
             .insert(id, TargetEntry::default());
-        TargetSocket { id }
+        let bw_port = Port::with_policy(sim, &format!("{name}.bw"), PortPolicy::ZeroOrMore);
+        TargetSocket { id, bw_port }
     }
 
     /// Returns this target socket's object id (the interface id initiators resolve to).
@@ -261,5 +366,61 @@ impl TargetSocket {
             .entry(self.id)
             .or_default()
             .transport_dbg = Some(Rc::new(callback));
+    }
+
+    /// Registers this target's forward non-blocking (AT request) callback.
+    ///
+    /// # Arguments
+    ///
+    /// * `sim` - The simulation under construction.
+    /// * `callback` - The `nb_transport_fw` implementation.
+    pub fn register_nb_transport_fw<F>(&self, sim: &Sim, callback: F)
+    where
+        F: Fn(&Ctx, &Txn, Phase, &mut SimTime) -> TlmSync + 'static,
+    {
+        let reg = registry(sim);
+        let mut reg = reg.borrow_mut();
+        let entry = reg.targets.entry(self.id).or_default();
+        debug_assert!(
+            entry.nb_transport_fw.is_none(),
+            "nb_transport_fw already registered on this target socket"
+        );
+        entry.nb_transport_fw = Some(Rc::new(callback));
+    }
+
+    /// Backward non-blocking transport to the bound initiator (the AT response path).
+    ///
+    /// Resolves `self.bw_port` to the bound initiator's `bw_export` id and calls its
+    /// registered `nb_transport_bw` (or returns [`TlmSync::Accepted`] if none).
+    ///
+    /// # Arguments
+    ///
+    /// * `ctx` - The kernel handle.
+    /// * `txn` - The shared transaction handle.
+    /// * `phase` - The current phase.
+    /// * `delay` - The timing annotation.
+    ///
+    /// # Returns
+    ///
+    /// The initiator's [`TlmSync`].
+    pub fn nb_transport_bw(
+        &self,
+        ctx: &Ctx,
+        txn: &Txn,
+        phase: Phase,
+        delay: &mut SimTime,
+    ) -> TlmSync {
+        let Some(&initiator) = self.bw_port.resolved_in_ctx(ctx).first() else {
+            return TlmSync::Accepted;
+        };
+        let callback = registry_from_ctx(ctx)
+            .borrow()
+            .initiators
+            .get(&initiator)
+            .and_then(|i| i.nb_transport_bw.clone());
+        match callback {
+            Some(callback) => callback(ctx, txn, phase, delay),
+            None => TlmSync::Accepted,
+        }
     }
 }

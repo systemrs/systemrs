@@ -20,6 +20,10 @@ pub use systemrs_core::{
 pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim};
 pub use systemrs_macros::module as module_macro;
 pub use systemrs_time::{Resolution, SimTime};
+pub use systemrs_tlm_utils::{
+    AtToLtAdapter, GlobalQuantum, LtToAtAdapter, PeqWithGet, PhaseQueue, QuantumKeeper,
+    set_global_quantum,
+};
 pub use systemrs_tlm2::{
     ByteEnable, Command, GenericPayload, InitiatorSocket, Memory, Phase, ResponseStatus,
     TargetSocket, TlmSync, Txn, TxnPool,

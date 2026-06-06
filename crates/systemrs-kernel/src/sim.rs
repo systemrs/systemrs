@@ -21,6 +21,30 @@ use crate::inner::Inner;
 use crate::phase::Phase;
 use crate::process::{ProcKind, Process, ProcessBody, WaitState, WakeReason};
 
+/// Wraps an `FnOnce(&Ctx) + Send` thread body in a [`Fiber`].
+///
+/// The `Send` bound is inherited from [`Fiber::new`]; the body reaches the kernel
+/// through the thread-local [`Ctx::current`] set while it runs, so it never needs
+/// to capture a (`!Send`) `Ctx`. Shared by [`Sim::add_thread`] (elaboration-time)
+/// and [`Ctx::spawn_thread`] (runtime spawn).
+///
+/// # Arguments
+///
+/// * `body` - The thread body.
+///
+/// # Returns
+///
+/// A resumable [`Fiber`] for the body.
+pub(crate) fn build_thread_fiber<F>(body: F) -> Fiber
+where
+    F: FnOnce(&Ctx) + Send + 'static,
+{
+    Fiber::new(move || {
+        let ctx = Ctx::current();
+        body(&ctx);
+    })
+}
+
 /// The top-level simulation: an elaboration-time builder that becomes a runner.
 ///
 /// Construction (events, channels, processes, services) happens before
@@ -195,10 +219,7 @@ impl Sim {
     where
         F: FnOnce(&Ctx) + Send + 'static,
     {
-        let fiber = Fiber::new(move || {
-            let ctx = Ctx::current();
-            body(&ctx);
-        });
+        let fiber = build_thread_fiber(body);
         self.add_process(
             name,
             ProcKind::Thread,

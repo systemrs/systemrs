@@ -1,8 +1,8 @@
 //! Base-protocol conformance: an initiator `b_transport`s to a memory target.
 
 use crate::{
-    ByteEnable, Command, GenericPayload, InitiatorSocket, Memory, ResponseStatus, TargetSocket,
-    TxnPool,
+    ByteEnable, Command, GenericPayload, InitiatorSocket, Memory, Phase, ResponseStatus,
+    TargetSocket, TlmSync, TxnPool,
 };
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -180,6 +180,76 @@ fn read_honours_byte_enables() {
     sim.run_until(SimTime::from_ns(10));
     // Lanes 0,2 enabled (EF, AD); lanes 1,3 disabled (stay FF).
     assert_eq!(*result.lock().expect("lock"), [0xEF, 0xFF, 0xAD, 0xFF]);
+}
+
+/// Verifies the AT crossed bind routes both directions: a forward `nb_transport_fw`
+/// reaches the target's callback, and the target's `nb_transport_bw` reaches the
+/// initiator's callback (keyed by the initiator's `bw_export` id).
+#[test]
+fn nb_crossed_path_routes_both_directions() {
+    let sim = Sim::new();
+    let target = TargetSocket::new(&sim, "t");
+    let isock = InitiatorSocket::new(&sim, "i");
+    isock.bind(&sim, &target);
+
+    let bw_fired = Arc::new(AtomicU32::new(0));
+    let bf = Arc::clone(&bw_fired);
+    isock.register_nb_transport_bw(&sim, move |_cx, _txn, _phase, _t| {
+        bf.fetch_add(1, Ordering::Relaxed);
+        TlmSync::Completed
+    });
+
+    // The target's forward callback drives a backward phase to the initiator.
+    let bw_sync: Arc<Mutex<Option<TlmSync>>> = Arc::new(Mutex::new(None));
+    let bs = Arc::clone(&bw_sync);
+    target.register_nb_transport_fw(&sim, move |cx, txn, _phase, t| {
+        let sync = target.nb_transport_bw(cx, txn, Phase::BeginResp, t);
+        *bs.lock().expect("lock") = Some(sync);
+        TlmSync::Updated(Phase::EndReq)
+    });
+
+    let pool = TxnPool::new();
+    let txn = pool.acquire();
+    let fw_sync: Arc<Mutex<Option<TlmSync>>> = Arc::new(Mutex::new(None));
+    let fs = Arc::clone(&fw_sync);
+    // A method (not a thread) drives nb so it may capture the `!Send` Txn `Rc`.
+    sim.add_method("init", &[], true, move |cx| {
+        let mut t = SimTime::ZERO;
+        let sync = isock.nb_transport_fw(cx, &txn, Phase::BeginReq, &mut t);
+        *fs.lock().expect("lock") = Some(sync);
+    });
+
+    sim.run_until(SimTime::from_ns(10));
+    assert_eq!(bw_fired.load(Ordering::Relaxed), 1); // bw closure fired, by bw_export id
+    assert_eq!(
+        *fw_sync.lock().expect("lock"),
+        Some(TlmSync::Updated(Phase::EndReq))
+    );
+    assert_eq!(*bw_sync.lock().expect("lock"), Some(TlmSync::Completed));
+}
+
+/// Verifies a forward `nb_transport_fw` to a target with no nb callback returns the
+/// `Accepted` default (and a pure-LT model still binds fine alongside).
+#[test]
+fn unregistered_nb_fw_returns_accepted() {
+    let sim = Sim::new();
+    let mem = Memory::new(16, SimTime::ZERO);
+    let target = TargetSocket::new(&sim, "t");
+    mem.connect(&sim, &target); // only b_transport registered, no nb_transport_fw
+    let isock = InitiatorSocket::new(&sim, "i");
+    isock.bind(&sim, &target);
+
+    let pool = TxnPool::new();
+    let txn = pool.acquire();
+    let got: Arc<Mutex<Option<TlmSync>>> = Arc::new(Mutex::new(None));
+    let g = Arc::clone(&got);
+    sim.add_method("init", &[], true, move |cx| {
+        let mut t = SimTime::ZERO;
+        *g.lock().expect("lock") = Some(isock.nb_transport_fw(cx, &txn, Phase::BeginReq, &mut t));
+    });
+
+    sim.run_until(SimTime::from_ns(1));
+    assert_eq!(*got.lock().expect("lock"), Some(TlmSync::Accepted));
 }
 
 /// Verifies an unbound initiator socket fails its `OneOrMore` port policy at the

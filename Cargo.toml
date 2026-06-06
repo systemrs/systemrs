@@ -1,11 +1,10 @@
 # Workspace root (virtual manifest) for SystemRS.
 #
 # See `doc/systemrs-design.md` §10 for the full 14-crate plan. This workspace
-# implements the deterministic core and the TLM-2.0 LT path required to run the
-# two reference examples (`crates/systemrs-examples`): an incrementing counter
-# and a basic RV32I CPU hart. The interop (`-ffi`), tracing backends (`-trace`),
-# AT/PEQ utilities (`-tlm-utils`), proc-macros (`-macros`) and TLM-1 analysis
-# (`-tlm1`) crates from the design are deferred per the roadmap (§12, M4+).
+# implements the deterministic core, the TLM-2.0 LT path, and (from M4) the AT/PEQ
+# temporal-decoupling utilities (`-tlm-utils`). The interop (`-ffi`), tracing
+# backends (`-trace`), and TLM-1 analysis (`-tlm1`) crates from the design remain
+# deferred per the roadmap (§12, M5+).
 [workspace]
 resolver = "3"
 members = [
@@ -17,6 +16,7 @@ members = [
     "crates/systemrs-core",
     "crates/systemrs-channels",
     "crates/systemrs-tlm2",
+    "crates/systemrs-tlm-utils",
     "crates/systemrs",
     "crates/systemrs-examples",
 ]
@@ -38,6 +38,7 @@ systemrs-kernel = { path = "crates/systemrs-kernel", version = "0.1.0" }
 systemrs-core = { path = "crates/systemrs-core", version = "0.1.0" }
 systemrs-channels = { path = "crates/systemrs-channels", version = "0.1.0" }
 systemrs-tlm2 = { path = "crates/systemrs-tlm2", version = "0.1.0" }
+systemrs-tlm-utils = { path = "crates/systemrs-tlm-utils", version = "0.1.0" }
 systemrs-macros = { path = "crates/systemrs-macros", version = "0.1.0" }
 systemrs = { path = "crates/systemrs", version = "0.1.0" }
 

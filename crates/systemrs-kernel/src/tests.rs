@@ -129,3 +129,67 @@ fn dynamic_event_wait_wakes_on_notify() {
     assert_eq!(woke.load(Ordering::Relaxed), 1);
     assert_eq!(sim.now(), SimTime::from_ns(10));
 }
+
+/// Verifies a thread spawned mid-run via `Ctx::spawn_thread` runs in the current
+/// simulation, can `wait`, and that spawn order maps to run order (FIFO).
+#[test]
+fn spawn_thread_runs_in_current_run() {
+    let sim = Sim::new();
+    let log: Log = Arc::new(Mutex::new(Vec::new()));
+    let l = Arc::clone(&log);
+    let now_at_child: Arc<AtomicU64> = Arc::new(AtomicU64::new(0));
+    let n = Arc::clone(&now_at_child);
+
+    sim.add_thread("parent", &[], true, move |cx| {
+        // The parent runs at t=5ns, then spawns two children.
+        cx.wait(SimTime::from_ns(5));
+        let la = Arc::clone(&l);
+        cx.spawn_thread("child_a", move |c2| {
+            la.lock().expect("lock").push("a-start");
+            c2.wait(SimTime::from_ns(1));
+            la.lock().expect("lock").push("a-end");
+        });
+        let lb = Arc::clone(&l);
+        let n2 = Arc::clone(&n);
+        cx.spawn_thread("child_b", move |c2| {
+            lb.lock().expect("lock").push("b-start");
+            n2.store(c2.now().units(), Ordering::Relaxed);
+        });
+    });
+
+    sim.run_until(SimTime::from_ns(100));
+    // Both children started this run; FIFO spawn order; the child observed now==5ns.
+    assert_eq!(
+        *log.lock().expect("lock"),
+        vec!["a-start", "b-start", "a-end"]
+    );
+    assert_eq!(
+        now_at_child.load(Ordering::Relaxed),
+        SimTime::from_ns(5).units()
+    );
+}
+
+/// Verifies a spawned body — which must be `Send` and so cannot capture an `Rc` —
+/// reaches per-spawn state via a registered service keyed by a `Copy` id (the
+/// construction the AT→LT adapter relies on).
+#[test]
+fn spawn_thread_body_reaches_service_state() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let sim = Sim::new();
+    let svc = Rc::new(RefCell::new(0u32));
+    sim.register_service(Rc::clone(&svc));
+
+    sim.add_thread("parent", &[], true, |cx| {
+        let id = 7u32; // Copy; the only thing captured into the Send body
+        cx.spawn_thread("child", move |c2| {
+            // Reach the service by type; the !Send Rc is never captured.
+            let state = c2.service::<RefCell<u32>>();
+            *state.borrow_mut() = id;
+        });
+    });
+
+    sim.run_until(SimTime::from_ns(1));
+    assert_eq!(*svc.borrow(), 7);
+}

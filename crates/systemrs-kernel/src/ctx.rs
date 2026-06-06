@@ -12,9 +12,9 @@ use std::rc::Rc;
 
 use systemrs_time::SimTime;
 
-use crate::ids::{ChanId, EventId};
+use crate::ids::{ChanId, EventId, ProcId};
 use crate::inner::Inner;
-use crate::process::WaitReq;
+use crate::process::{ProcKind, Process, ProcessBody, WaitReq, WaitState, WakeReason};
 
 thread_local! {
     /// The kernel state of the simulation running on this thread, if any.
@@ -92,6 +92,20 @@ impl Ctx {
         g.events
             .get(ev)
             .is_some_and(|e| e.trigger_stamp == g.change_stamp)
+    }
+
+    // ---- Events ---------------------------------------------------------------
+
+    /// Allocates a fresh, unsubscribed event at runtime and returns its id.
+    ///
+    /// The runtime analogue of [`crate::Sim::alloc_event`]; used by AT adapters to
+    /// create per-transaction completion events mid-simulation.
+    ///
+    /// # Returns
+    ///
+    /// The new [`EventId`].
+    pub fn alloc_event(&self) -> EventId {
+        self.inner.borrow_mut().alloc_event()
     }
 
     // ---- Notification ---------------------------------------------------------
@@ -185,6 +199,49 @@ impl Ctx {
     pub fn wait_all(&self, events: &[EventId]) {
         self.arm(WaitReq::And(events.to_vec()));
         systemrs_runtime::suspend();
+    }
+
+    // ---- Runtime spawn --------------------------------------------------------
+
+    /// Spawns a new `SC_THREAD` at runtime, made runnable in the current delta.
+    ///
+    /// Unlike the elaboration-time `Sim::add_thread`, this may be called from inside
+    /// a running process to start a fresh stackful coroutine — e.g. an AT→LT adapter
+    /// starting a per-transaction worker. The new thread is queued FIFO by spawn
+    /// order and picked up by the current `crunch`'s next thread batch, exactly like
+    /// a freshly-woken thread (preserving the evaluate→update→notify ordering).
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - A hierarchical name for diagnostics.
+    /// * `body` - The thread body; it may `Ctx::wait` from any call depth. It must be
+    ///   `Send` (inherited from the coroutine backend), so it reaches kernel and model
+    ///   state through `Ctx::current` and registered services — never by capturing a
+    ///   `!Send` handle such as an `Rc`.
+    ///
+    /// # Returns
+    ///
+    /// The new process's [`ProcId`].
+    pub fn spawn_thread<F>(&self, name: &str, body: F) -> ProcId
+    where
+        F: FnOnce(&Ctx) + Send + 'static,
+    {
+        let fiber = crate::sim::build_thread_fiber(body);
+        let mut g = self.inner.borrow_mut();
+        let pid = g.procs.insert(Process {
+            name: name.to_owned(),
+            kind: ProcKind::Thread,
+            body: ProcessBody::Thread(Some(fiber)),
+            static_sens: Vec::new(),
+            wait: WaitState::Static,
+            wait_gen: 0,
+            pending_wait: None,
+            wake: WakeReason::Normal,
+            queued: false,
+            dead: false,
+        });
+        g.make_runnable(pid);
+        pid
     }
 
     // ---- Method next-trigger (no suspend) ------------------------------------

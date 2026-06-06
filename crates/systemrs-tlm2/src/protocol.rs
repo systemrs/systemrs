@@ -52,6 +52,14 @@ impl Protocol for BaseProtocol {
     type Phase = Phase;
 }
 
+/// The backward (target → initiator) binding tag for a socket's response path.
+///
+/// A compile-time tag distinguishing the crossed backward `Port`/`Export` from the
+/// forward [`BaseProtocol`] bind, so both resolve independently through the channel
+/// binding registry (`doc/systemrs-design.md` §6d).
+#[derive(Debug, Clone, Copy)]
+pub struct BwBaseProtocol;
+
 /// The forward transport interface (initiator → target).
 ///
 /// `b_transport` is the only blocking method; it may yield the calling coroutine

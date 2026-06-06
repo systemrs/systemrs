@@ -87,6 +87,7 @@ dependencies = [
  "systemrs-kernel",
  "systemrs-macros",
  "systemrs-time",
+ "systemrs-tlm-utils",
  "systemrs-tlm2",
 ]
 
@@ -155,6 +156,18 @@ name = "systemrs-time"
 version = "0.1.0"
 dependencies = [
  "systemrs-diag",
+]
+
+[[package]]
+name = "systemrs-tlm-utils"
+version = "0.1.0"
+dependencies = [
+ "systemrs-channels",
+ "systemrs-core",
+ "systemrs-diag",
+ "systemrs-kernel",
+ "systemrs-time",
+ "systemrs-tlm2",
 ]
 
 [[package]]

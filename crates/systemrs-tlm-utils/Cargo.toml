@@ -1,0 +1,22 @@
+[package]
+name = "systemrs-tlm-utils"
+description = "TLM-2.0 utilities for SystemRS: quantum keeper, PEQs, AT protocol, LT<->AT adapters, convenience sockets."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+systemrs-kernel.workspace = true
+systemrs-core.workspace = true
+systemrs-channels.workspace = true
+systemrs-tlm2.workspace = true
+systemrs-time.workspace = true
+# §10.1 omits -diag here, but the quantum keeper / adapters surface ERROR→Result and
+# may report_fatal (which lives in -diag); -diag is an L0 leaf, so no cycle.
+systemrs-diag.workspace = true
+
+[lints]
+workspace = true

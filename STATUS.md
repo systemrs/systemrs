@@ -10,13 +10,13 @@ this file's **Status** column is the *as-built* reality.
 
 **Legend:** ✅ Done · 🟡 Partial · ⬜ Missing (planned, not built) · ⏸️ Deferred (intentionally post-MVP) · ❌ Dropped (explicitly out of scope, §4)
 
-**Build health (2026-06-06):** `cargo test --workspace` → **76 passed, 0 failed** (+ doctests incl. an EC4 compile-fail); `fmt`/`clippy -D warnings`/`build --release`/`doc`/`deny`/`audit` all clean. **10 of 14** planned crates exist (`systemrs-macros` added in M2-11).
+**Build health (2026-06-06):** `cargo test --workspace` → **91 passed, 0 failed** (+ doctests); `fmt`/`clippy -D warnings`/`build --release`/`doc`/`deny`/`audit` all clean. **11 of 14** planned crates exist (`systemrs-tlm-utils` added in M4).
 
 **Feature tally (114 tracked, pre-M2 baseline):** ✅ 36 DONE  ·  🟡 17 PARTIAL  ·  ⬜ 39 MISSING  ·  ⏸️ 14 DEFERRED  ·  ❌ 8 DROPPED _(M2 rows below updated as Phase A lands)_
 
 ## Where we are
 
-M0 (delta loop), M1 (process model), and the M3 **LT TLM-2.0** slice are **done and bit-faithful**. **M2 (modules / hierarchy / ports / exports / elaboration) is now COMPLETE** — the full hierarchy/elaboration substrate landed across phases A–F (M2-01…14): the `ObjectStore` + kernel hooks, the generic `Port`/`Export` two-phase binding + `complete_binding`, the elaboration driver (construction fixpoint + lifecycle callbacks + init-commit) wired into `run_until`, the user-facing front door (`module()` scope closures + `Builder`, the `Kernel<Building/Running>` typestate, the `#[module]` macro), the TLM socket reconciliation onto the generic binding, and a two-level platform example proving **all seven M2 exit criteria** ([doc/plan-m2.md](doc/plan-m2.md)). **The next phase is M4** (temporal decoupling / AT protocol / PEQ / quantum keeper). M5 (observability/tracing/TLM-1), M6 (twin layer), M7+ and §11 interop are not started; their TLM-2 AT contract types exist only as inert trait-default stubs.
+M0 (delta loop), M1 (process model), the M3 **LT TLM-2.0** slice, and **M2 (modules / hierarchy / ports / exports / elaboration)** are **complete and bit-faithful** ([doc/plan-m2.md](doc/plan-m2.md), all 7 M2 exit criteria proven). **M4 (temporal decoupling / AT protocol / PEQ / quantum keeper) has met all its exit criteria** — a new L5 crate `systemrs-tlm-utils` plus a single additive kernel primitive (`Ctx::spawn_thread`) and strictly-additive tlm2 socket extensions deliver: E1 quantum sync-on-grid (`QuantumKeeper`), E2 a full BEGIN_REQ→END_RESP exchange exercising all three `TlmSync` paths (the AT four-phase FSM over `nb_transport_fw/bw`), E3 LT→AT (`LtToAtAdapter`), E4 AT→LT (`AtToLtAdapter`, spawning a Send-safe per-transaction coroutine), and E5 PEQ delta-parity (`PeqWithGet`/`PhaseQueue`) — with the LT path (rv32i/platform) bit-identical throughout ([doc/plan-m4.md](doc/plan-m4.md)). **M4 polish deferred** (off the exit-criteria path): convenience sockets with b↔nb synthesis (M4-11), DMI (M4-12), and a reusable standalone `AtMemory` (M4-13, covered by test fixtures). **The next milestone is M5** (observability / reporting / tracing / TLM-1 analysis). M6 (twin layer), M7+ and §11 interop are not started.
 
 👉 **Next phase plan:** [doc/plan-m2.md](doc/plan-m2.md) — Milestone 2.
 
@@ -42,7 +42,7 @@ _§10 (14-crate plan)_
 | ✅ | systemrs-examples (L7, conformance/integration tests) | REPLICATE | §10.1 | crates/systemrs-examples/src/{counter,rv32i,platform}.rs + tests/{integration,hierarchy,module_macro}.rs (counter + RV32I hart + two-level TLM platform capstone) — Dev-deps insta/criterion from §10.1 not yet used. |
 | ✅ | systemrs-macros (L0, proc-macros / #[module]) | SIMPLIFY | §10.1, §4 modules | M2-11: `crates/systemrs-macros` (proc-macro2/quote/syn only); `#[module]` attribute emits `::systemrs::Module` (path-qualified, no facade cycle). Facade-routed test in `systemrs-examples`. |
 | ⬜ | systemrs-tlm1 (L4, put/get/peek + analysis ports) | REPLICATE | §10.1, §3.7 | Crate does not exist. |
-| ⬜ | systemrs-tlm-utils (L5, quantum keeper, PEQs, convenience sockets, LT/AT adapters) | REPLICATE | §10.1, §3.11 | Crate does not exist; no quantum/PEQ code anywhere (only doc-comment mentions). |
+| ✅ | systemrs-tlm-utils (L5, quantum keeper, PEQs, convenience sockets, LT/AT adapters) | REPLICATE | §10.1, §3.11 | M4: `QuantumKeeper`/`GlobalQuantum`, `PeqWithGet`/`PhaseQueue`, AT FSM, `LtToAtAdapter`/`AtToLtAdapter`. Convenience/multi sockets deferred (M4-11). 11 tests. |
 | ⬜ | systemrs-trace (L5, sampling, recorders, VCD/FST) | SIMPLIFY | §10.1, §3.12 | Crate does not exist; sim.rs:432 comment notes stage callbacks would fire 'once -trace lands'. |
 | ⬜ | systemrs-ffi (L7, C ABI / cxx SystemC interop) | REPLICATE | §10.1, §11 | Crate does not exist; cosim feature not wired. |
 
@@ -152,15 +152,15 @@ _M4 (§3.9, §3.11, §4, §6d)_
 
 | | Feature | Decision | Design | Evidence / Notes |
 |---|---|---|---|---|
-| ⬜ | Quantum keeper + global quantum | REPLICATE | §4 TLM2; §6d temporal decoupling; §12 M4 | No QuantumKeeper anywhere (only doc-comment mentions in kernel/lib.rs). systemrs-tlm-utils absent. |
-| ⬜ | PEQ (peq_with_get then phase-aware, delta parity) | REPLICATE | §4 TLM2; §3.11; §12 M4 | No PEQ; depends on sc_event_queue + tlm-utils, both absent. |
-| 🟡 | nb_transport_fw / nb_transport_bw + 4-phase FSM + TlmSync | REPLICATE | §4 TLM2; §3.9; §12 M4 | protocol.rs FwTransport::nb_transport_fw / BwTransport::nb_transport_bw + phase.rs Phase {BeginReq..EndResp, Extended(PhaseId)} + TlmSync enum exist as trait defaults; never wired through sockets or called (grep confirms no call sites). Contracts present, mechanism inert. |
-| ⬜ | b<->nb (LT<->AT) adapters | REPLICATE (explicit adapters) | §4 TLM2; §12 M4 | No LT/AT adapters; tlm-utils absent. |
+| ✅ | Quantum keeper + global quantum | REPLICATE | §4 TLM2; §6d temporal decoupling; §12 M4 | M4-03/04: `tlm-utils/{global_quantum,quantum}.rs` — `GlobalQuantum` Sim service, `QuantumKeeper` (`need_sync` `>=`, `sync` the only yield, integer-only `q - now%q`). E1 sync-on-grid proven. |
+| ✅ | PEQ (peq_with_get then phase-aware, delta parity) | REPLICATE | §4 TLM2; §3.11; §12 M4 | M4-05/06: `PeqWithGet` (`BTreeMap<(SimTime,seq)>` + delta parity via `notify_after`) + `PhaseQueue` (SC_METHOD drain). E5 (one delta apart, FIFO) proven. No `sc_event_queue` needed (deferred to M5). |
+| ✅ | nb_transport_fw / nb_transport_bw + 4-phase FSM + TlmSync | REPLICATE | §4 TLM2; §3.9; §12 M4 | M4-07/08: nb routed through the socket closure registry (crossed bw double-bind, `BwBaseProtocol`, keyed by `bw_export` id); `at.rs` `next_phase` FSM; E2 exercises all three `TlmSync` paths. |
+| ✅ | b<->nb (LT<->AT) adapters | REPLICATE (explicit adapters) | §4 TLM2; §12 M4 | M4-09/10: `LtToAtAdapter` (blocks on per-`TxnId` event, E3) + `AtToLtAdapter` (spawns a Send-safe per-txn coroutine reaching the `Txn` via a service, E4). |
 | 🟡 | DMI (get_direct_mem_ptr / invalidate, arena handle/slice) | SIMPLIFY | §4 TLM2; §3.9 | protocol.rs Dmi struct + get_direct_mem_ptr/invalidate_direct_mem_ptr trait defaults (return false / noop); not wired to sockets, never granted. |
 | 🟡 | Extended phases (Phase::Extended(PhaseId) interned) | SIMPLIFY | §4 TLM2 | phase.rs Phase::Extended(PhaseId) variant defined; no interning registry, unexercised. |
 | ⏸️ | Endianness helpers | DEFER | §4 TLM2 | Not implemented (deferred per §4). |
 | ⏸️ | Instance-specific extensions | DEFER | §4 TLM2 | Not implemented (deferred per §4). |
-| 🟡 | Two same-time zero-delay notifications fire one delta apart FIFO (M4 exit) | REPLICATE | §12 M4 exit | Delta-FIFO ordering machinery exists in kernel (timed seq + delta-event vector) but the specific M4 zero-delay parity test is not present. |
+| ✅ | Two same-time zero-delay notifications fire one delta apart FIFO (M4 exit) | REPLICATE | §12 M4 exit | M4-05: `PeqWithGet` `two_zero_delay_notifies_fire_one_delta_apart_fifo` test (E5) — released via `notify_delta`, one-per-delta drain. |
 
 ### M5 — Observability, reporting & tracing
 
