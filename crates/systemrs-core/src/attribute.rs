@@ -5,9 +5,8 @@
 //! attribute mechanism in idiomatic Rust: a `HashMap<TypeId, Box<dyn Any>>` rather
 //! than a name-keyed `sc_attribute` list.
 //!
-//! In Milestone 2 the *type* is defined here so [`crate::ObjectMeta`] can name it;
-//! the `get`/`set` bodies are filled in by M2-12 (the feature is not load-bearing
-//! for the elaboration barrier).
+//! At most one value per concrete type is stored (keyed by [`TypeId`]); the feature
+//! is not load-bearing for the elaboration barrier.
 
 use std::any::Any;
 use std::any::TypeId;
@@ -31,5 +30,52 @@ impl AttributeStore {
     /// An empty [`AttributeStore`].
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Stores `value`, replacing any previous attribute of the same type `T`.
+    ///
+    /// Allocates the backing map on first use.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The attribute value (one per concrete type `T`).
+    pub fn set<T: Any>(&mut self, value: T) {
+        self.map
+            .get_or_insert_with(HashMap::new)
+            .insert(TypeId::of::<T>(), Box::new(value));
+    }
+
+    /// Returns a reference to the stored attribute of type `T`, if any.
+    ///
+    /// # Returns
+    ///
+    /// The stored `&T`, or `None` if no attribute of type `T` is set.
+    pub fn get<T: Any>(&self) -> Option<&T> {
+        self.map
+            .as_ref()?
+            .get(&TypeId::of::<T>())?
+            .downcast_ref::<T>()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AttributeStore;
+
+    /// Stays unallocated until first set; then round-trips two distinct types.
+    #[test]
+    fn set_get_round_trips() {
+        let mut a = AttributeStore::new();
+        assert!(a.map.is_none()); // no allocation until first set
+        assert_eq!(a.get::<u32>(), None);
+
+        a.set(7u32);
+        a.set("name");
+        assert_eq!(a.get::<u32>(), Some(&7));
+        assert_eq!(a.get::<&str>(), Some(&"name"));
+        assert_eq!(a.get::<i64>(), None);
+
+        a.set(9u32); // replaces
+        assert_eq!(a.get::<u32>(), Some(&9));
     }
 }

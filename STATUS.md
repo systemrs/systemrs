@@ -10,13 +10,13 @@ this file's **Status** column is the *as-built* reality.
 
 **Legend:** ✅ Done · 🟡 Partial · ⬜ Missing (planned, not built) · ⏸️ Deferred (intentionally post-MVP) · ❌ Dropped (explicitly out of scope, §4)
 
-**Build health (2026-06-06):** `cargo test --workspace` → **71 passed, 0 failed**; `fmt`/`clippy -D warnings`/`build --release`/`doc`/`deny`/`audit` all clean. **10 of 14** planned crates exist (`systemrs-macros` added in M2-11).
+**Build health (2026-06-06):** `cargo test --workspace` → **76 passed, 0 failed** (+ doctests incl. an EC4 compile-fail); `fmt`/`clippy -D warnings`/`build --release`/`doc`/`deny`/`audit` all clean. **10 of 14** planned crates exist (`systemrs-macros` added in M2-11).
 
 **Feature tally (114 tracked, pre-M2 baseline):** ✅ 36 DONE  ·  🟡 17 PARTIAL  ·  ⬜ 39 MISSING  ·  ⏸️ 14 DEFERRED  ·  ❌ 8 DROPPED _(M2 rows below updated as Phase A lands)_
 
 ## Where we are
 
-M0 (delta loop) and M1 (process model) are **done and bit-faithful**; the M3 **LT TLM-2.0** slice is **done** (generic payload, pool MM, extensions, `b_transport`, `transport_dbg`, id-keyed sockets). **M2 (modules / hierarchy / ports / exports / elaboration) is now in progress** — Phases A–E have landed (M2-01…11): the `ObjectStore` foundation + kernel hooks, the generic `Port`/`Export` two-phase binding + `complete_binding`, the elaboration driver wired into `run_until`, the user-facing front door (`module()` scope closures + `Builder`, the `Kernel<Building/Running>` typestate, the `#[module]` macro), and the TLM socket reconciliation onto the generic `Port` binding (deferred bind, unbound→FATAL). Only the **Phase-F polish** remains: AttributeStore get/set bodies (M2-12), a two-level platform example proving all 7 exit criteria (M2-13), and the final facade/sweep consolidation (M2-14) ([doc/plan-m2.md](doc/plan-m2.md)). M4 (AT/PEQ/quantum), M5 (observability/tracing/TLM-1), M6 (twin layer), M7+ and §11 interop are not started; their TLM-2 contract types exist only as inert trait-default stubs.
+M0 (delta loop), M1 (process model), and the M3 **LT TLM-2.0** slice are **done and bit-faithful**. **M2 (modules / hierarchy / ports / exports / elaboration) is now COMPLETE** — the full hierarchy/elaboration substrate landed across phases A–F (M2-01…14): the `ObjectStore` + kernel hooks, the generic `Port`/`Export` two-phase binding + `complete_binding`, the elaboration driver (construction fixpoint + lifecycle callbacks + init-commit) wired into `run_until`, the user-facing front door (`module()` scope closures + `Builder`, the `Kernel<Building/Running>` typestate, the `#[module]` macro), the TLM socket reconciliation onto the generic binding, and a two-level platform example proving **all seven M2 exit criteria** ([doc/plan-m2.md](doc/plan-m2.md)). **The next phase is M4** (temporal decoupling / AT protocol / PEQ / quantum keeper). M5 (observability/tracing/TLM-1), M6 (twin layer), M7+ and §11 interop are not started; their TLM-2 AT contract types exist only as inert trait-default stubs.
 
 👉 **Next phase plan:** [doc/plan-m2.md](doc/plan-m2.md) — Milestone 2.
 
@@ -39,7 +39,7 @@ _§10 (14-crate plan)_
 | 🟡 | systemrs-channels (L3, Signal/Fifo/Clock) | REPLICATE | §10.1 | crates/systemrs-channels/src/{signal,fifo,clock}.rs — Signal/Buffer/Fifo/Clock present; no ports/exports/binding, no mutex/semaphore, no signal posedge/negedge. |
 | 🟡 | systemrs-tlm2 (L4, GP+MM+extensions, transport, phases, DMI, sockets) | REPLICATE | §10.1 | crates/systemrs-tlm2/src/{gp,mm,extension,protocol,socket,phase,memory}.rs — LT path (GP, MM pool, extensions, b_transport, transport_dbg, sockets) done; AT/nb_transport/DMI only as unused trait-default stubs. |
 | ✅ | systemrs (L6, facade/prelude) | REPLICATE | §10.1 | crates/systemrs/src/{lib,prelude}.rs (re-exports all built crates + prelude) |
-| ✅ | systemrs-examples (L7, conformance/integration tests) | REPLICATE | §10.1 | crates/systemrs-examples/{src/{counter,rv32i},examples,tests/integration}.rs (counter + RV32I hart; 3 integration + 10 unit tests pass) — Dev-deps insta/criterion from §10.1 not yet used. |
+| ✅ | systemrs-examples (L7, conformance/integration tests) | REPLICATE | §10.1 | crates/systemrs-examples/src/{counter,rv32i,platform}.rs + tests/{integration,hierarchy,module_macro}.rs (counter + RV32I hart + two-level TLM platform capstone) — Dev-deps insta/criterion from §10.1 not yet used. |
 | ✅ | systemrs-macros (L0, proc-macros / #[module]) | SIMPLIFY | §10.1, §4 modules | M2-11: `crates/systemrs-macros` (proc-macro2/quote/syn only); `#[module]` attribute emits `::systemrs::Module` (path-qualified, no facade cycle). Facade-routed test in `systemrs-examples`. |
 | ⬜ | systemrs-tlm1 (L4, put/get/peek + analysis ports) | REPLICATE | §10.1, §3.7 | Crate does not exist. |
 | ⬜ | systemrs-tlm-utils (L5, quantum keeper, PEQs, convenience sockets, LT/AT adapters) | REPLICATE | §10.1, §3.11 | Crate does not exist; no quantum/PEQ code anywhere (only doc-comment mentions). |
@@ -103,7 +103,12 @@ _M1 (§3.2, §4 Processes, §6a)_
 
 _M2 (§3.4, §3.5, §4, §6b)_
 
-> **M2 in progress** — Phases A–E landed (M2-01…11): the `ObjectStore` arena + per-bucket registries; the generic `Interface`/`Port`/`Export` two-phase binding + `complete_binding`; the elaboration driver wired into `run_until`; the user-facing front door — `module(name, |m| {…})` scope closures with `Builder` + `ScopeGuard`, the `Kernel<Building/Running>` typestate (compile-time bind-after-start guard), the `#[module]` proc-macro; **and the TLM socket reconciliation** onto the generic `Port` (deferred bind, unbound→FATAL, rv32i bit-identical). The **only remaining work is the Phase-F polish**: AttributeStore bodies (M2-12), a two-level platform example proving all 7 exit criteria (M2-13), and the facade/sweep consolidation (M2-14). See [doc/plan-m2.md](doc/plan-m2.md).
+> **✅ M2 COMPLETE** (phases A–F, M2-01…14). All seven exit criteria proven by the
+> `systemrs-examples` platform capstone + unit tests: EC1 dot-joined names · EC2 socket bind via
+> `complete_binding` · EC3 hierarchical port-to-port · EC4 binding-after-`build()` is a compile
+> error (compile-fail doctest) + runtime `Err` · EC5 construction fixpoint · EC6 four callbacks in
+> bucket order + `end_of_simulation` once · EC7 port-policy cardinality. Existing M0/M1/M3 tests
+> bit-identical throughout. See [doc/plan-m2.md](doc/plan-m2.md).
 
 | | Feature | Decision | Design | Evidence / Notes |
 |---|---|---|---|---|
@@ -112,10 +117,10 @@ _M2 (§3.4, §3.5, §4, §6b)_
 | ✅ | Object hierarchy + naming + uniqueness | REPLICATE | §4 Modules; §6b | M2-02: `core/object.rs` `ObjectStore` (`SlotMap<ObjectId, ObjectMeta>` + name table + scope stack + implicit root); dot-joined unique names, sanitisation, deterministic suffixing. 9 unit tests. |
 | ✅ | sc_module_name LIFO-stack -> cx.module(name, \|m\| {..}) scope closures | DROP mechanism, REPLICATE outcome | §4 Modules | M2-08: `core/module.rs` `module`/`module_with` + `Builder` (nested modules, `m.method`/`m.thread`); `core/hierarchy.rs` `ScopeGuard` RAII push/pop. `Kernel<Building/Running>` typestate front door (M2-10). 5 tests. |
 | 🟡 | Orphan-children-to-root-on-drop via arena re-parent | REPLICATE | §4 Modules | M2-02: `ObjectStore::reparent_children_to_root` (pure-id reparent) + unit test present; full destruction-order integration deferred (§12 M7+). |
-| 🟡 | Interface/port/export + two-phase deferred bind + complete_binding | REPLICATE | §4 Ports; §12 M2 | M2-04/05: `channels/{interface,port,export,binding}.rs` — `Port<IF>`/`Export<IF>` Copy handles, id-keyed `PortRegistry`, two-phase `record` + `complete` (idempotent, cycle-guarded), **auto-driven at the barrier** via `BindingElaborator::end_of_elaboration` (M2-06). 10 unit tests. Not yet used by TLM sockets (M2-09). |
+| ✅ | Interface/port/export + two-phase deferred bind + complete_binding | REPLICATE | §4 Ports; §12 M2 | M2-04/05: `channels/{interface,port,export,binding}.rs` — `Port<IF>`/`Export<IF>` Copy handles, id-keyed `PortRegistry`, two-phase `record` + `complete` (idempotent, cycle-guarded), auto-driven at the barrier; **consumed by the TLM sockets** (M2-09) and the platform capstone. 10 unit tests. |
 | ✅ | Multiports + port-policy counting | REPLICATE | §4 Ports | M2-04/05: `PortPolicy` (`OneOrMore`/`AllBound`/`ZeroOrMore`) enforced at end of `complete`; multiport flatten preserves order. Tested. |
 | ✅ | Hierarchical port-to-port binding | REPLICATE | §4 Ports; §12 M2 | M2-05: `complete` flattens parent forwards depth-first (borrow-safe id-threading); port→parent-port and port→export chains tested incl. 3-deep. |
-| 🟡 | Attributes (sc_attribute<T>) / AttributeStore | DEFER | §4 Modules; §6b | M2-02: `AttributeStore` type present (`core/attribute.rs`) on `ObjectMeta`; lazy get/set bodies are M2-12. |
+| ✅ | Attributes (sc_attribute<T>) / AttributeStore | DEFER→done | §4 Modules; §6b | M2-12: `AttributeStore` lazy `get`/`set` (`core/attribute.rs`) + `ObjectStore::set_attribute`/`attribute` wiring on `ObjectMeta`. Tested. (DEFER per §4, but landed.) |
 
 ### M3 — Primitive channels + first end-to-end LT transaction
 

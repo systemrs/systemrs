@@ -10,4 +10,5 @@
 //!   through `b_transport` over an initiator socket to a memory target.
 
 pub mod counter;
+pub mod platform;
 pub mod rv32i;

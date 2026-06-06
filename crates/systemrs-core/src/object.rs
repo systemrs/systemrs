@@ -11,6 +11,7 @@
 //! socket registry, so it is reachable during elaboration without threading a
 //! handle through every constructor.
 
+use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -289,6 +290,35 @@ impl ObjectStore {
     /// Returns the kind of `id`, if present.
     pub fn kind(&self, id: ObjectId) -> Option<ObjectKind> {
         self.objects.get(id).map(|m| m.kind)
+    }
+
+    /// Sets a typed attribute on object `id` (lazily allocating its store).
+    ///
+    /// A no-op if `id` is stale. One value per concrete type `T`.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The object to attribute.
+    /// * `value` - The attribute value.
+    pub fn set_attribute<T: Any>(&mut self, id: ObjectId, value: T) {
+        if let Some(meta) = self.objects.get_mut(id) {
+            meta.attributes
+                .get_or_insert_with(AttributeStore::new)
+                .set(value);
+        }
+    }
+
+    /// Returns object `id`'s attribute of type `T`, if set.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The object id.
+    ///
+    /// # Returns
+    ///
+    /// The stored `&T`, or `None`.
+    pub fn attribute<T: Any>(&self, id: ObjectId) -> Option<&T> {
+        self.objects.get(id)?.attributes.as_ref()?.get::<T>()
     }
 
     /// Returns the number of objects in the store, including the root.
@@ -596,6 +626,16 @@ mod tests {
         let a = store(&sim);
         let b = store(&sim);
         assert!(Rc::ptr_eq(&a, &b));
+    }
+
+    /// Typed attributes round-trip through an object's lazily-allocated store.
+    #[test]
+    fn object_attributes_round_trip() {
+        let mut s = ObjectStore::new();
+        let id = s.insert(s.root(), "m", ObjectKind::Module);
+        assert_eq!(s.attribute::<u32>(id), None);
+        s.set_attribute(id, 42u32);
+        assert_eq!(s.attribute::<u32>(id), Some(&42));
     }
 
     /// An elaborator that overrides `object_kind`, for bucket-routing tests.

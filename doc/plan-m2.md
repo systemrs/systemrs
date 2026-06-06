@@ -1,6 +1,7 @@
 # Plan — Milestone 2: Modules, hierarchy, ports/exports & the elaboration barrier
 
-> Status: **in progress** (2026-06-06). The next logical phase per the design roadmap
+> Status: **✅ COMPLETE** (2026-06-06) — all 14 work items landed, all 7 exit criteria proven,
+> 76 tests + doctests green, full skill sweep clean. The next logical phase per the design roadmap
 > ([doc/systemrs-design.md](systemrs-design.md) §12). See [STATUS.md](../STATUS.md) for
 > the full as-built picture. Design refs: §3.4, §3.5, §6b, §6a (arena/ownership),
 > §10.3 (crate layout), §14 (naming map).
@@ -20,11 +21,13 @@
 > `Kernel<Building/Running>` typestate front door — compile-time bind-after-start guard;
 > `systemrs-macros` + `#[module]` proc-macro, path-qualified, facade-routed test). `cargo test`
 > **70 green**, full skill sweep clean; `systemrs-macros` is the 10th crate.
-> **Phase E** ✅ M2-09 (TLM sockets reconciled onto the generic forward `Port`: deferred bind
-> resolved at the barrier, unbound socket → FATAL; closure registry kept as resolved storage;
-> rv32i bit-identical). `cargo test` **71 green**, full skill sweep clean.
-> Next: **Phase F** (M2-12 AttributeStore get/set bodies · M2-13 two-level platform example
-> proving the 7 exit criteria · M2-14 facade re-exports + final consolidation sweep).
+> **Phase E** ✅ M2-09 (TLM sockets reconciled onto the generic forward `Port`: deferred bind,
+> unbound→FATAL; rv32i bit-identical). **Phase F** ✅ M2-12 (`AttributeStore` get/set + `ObjectStore`
+> wiring) · M2-13 (two-level platform capstone proving all 7 exit criteria) · M2-14 (facade
+> re-exports + final sweep). `cargo test` **76 green** + doctests (incl. EC4 compile-fail).
+>
+> **M2 is done.** The next milestone is **M4** (temporal decoupling / AT protocol / PEQ / quantum
+> keeper) — see [systemrs-design.md](systemrs-design.md) §12.
 
 ## Why M2 next
 

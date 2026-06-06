@@ -41,8 +41,8 @@ pub use systemrs_macros::module;
 // Flat re-exports of the most-used items.
 pub use systemrs_channels::{Buffer, Clock, Export, Fifo, Interface, Port, PortPolicy, Signal};
 pub use systemrs_core::{
-    Build, Builder, Building, Elaborate, Kernel, Module, ObjectId, ObjectKind, Running, module,
-    module_with,
+    AttributeStore, Build, Builder, Building, Elaborate, Kernel, Module, ObjectId, ObjectKind,
+    ObjectMeta, ObjectStore, Running, module, module_with, store,
 };
 pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim};
 pub use systemrs_time::{Resolution, SimTime};
