@@ -30,6 +30,17 @@ use crate::name;
 /// from a callback body double-borrowing the store (`doc/systemrs-design.md` §6b).
 pub(crate) type Elaborator = Rc<RefCell<dyn Elaborate>>;
 
+/// The fixed order the four elaborator buckets are driven in each elaboration
+/// phase: ports, then exports, then primitive channels, then modules. This
+/// reproduces SystemC's registry order so binding completes (ports/exports) before
+/// modules observe it in `end_of_elaboration` (`doc/systemrs-design.md` §6b).
+pub(crate) const BUCKET_ORDER: [ObjectKind; 4] = [
+    ObjectKind::Port,
+    ObjectKind::Export,
+    ObjectKind::PrimChannel,
+    ObjectKind::Module,
+];
+
 /// One per-kind elaborator registry with its own construction-done cursor.
 ///
 /// Four `ElabBucket`s (ports, exports, prim-channels, modules) reproduce SystemC's
@@ -393,6 +404,52 @@ impl ObjectStore {
         self.bucket_for(kind)
             .map_or(0, |b| b.construction_done_cursor)
     }
+
+    /// Returns clones of the elaborators in `kind`'s bucket that have not yet had
+    /// `before_end_of_elaboration` driven, advancing that bucket's cursor to the
+    /// current length.
+    ///
+    /// The driver clones the `Rc`s *out* under this brief borrow, then releases the
+    /// store before invoking the callbacks — so a callback that creates new objects
+    /// (re-entering the store) cannot double-borrow it (`doc/systemrs-design.md` §6b).
+    /// Objects created during those callbacks append past the new cursor and are
+    /// returned on the next call (the construction fixpoint).
+    ///
+    /// # Arguments
+    ///
+    /// * `kind` - An elaborator kind.
+    ///
+    /// # Returns
+    ///
+    /// The newly-registered elaborators of `kind` since the last call.
+    pub(crate) fn take_new_before_end(&mut self, kind: ObjectKind) -> Vec<Elaborator> {
+        let Some(bucket) = self.bucket_for_mut(kind) else {
+            return Vec::new();
+        };
+        let start = bucket.construction_done_cursor;
+        let end = bucket.entries.len();
+        bucket.construction_done_cursor = end;
+        bucket.entries[start..end]
+            .iter()
+            .map(|(_, e)| Rc::clone(e))
+            .collect()
+    }
+
+    /// Returns clones of every elaborator in `kind`'s bucket (for the
+    /// `end_of_elaboration`/`start_of_simulation`/`end_of_simulation` passes).
+    ///
+    /// # Arguments
+    ///
+    /// * `kind` - An elaborator kind.
+    ///
+    /// # Returns
+    ///
+    /// All elaborators of `kind`, in registration order.
+    pub(crate) fn all_elaborators(&self, kind: ObjectKind) -> Vec<Elaborator> {
+        self.bucket_for(kind).map_or_else(Vec::new, |b| {
+            b.entries.iter().map(|(_, e)| Rc::clone(e)).collect()
+        })
+    }
 }
 
 impl Default for ObjectStore {
@@ -420,6 +477,12 @@ pub fn store(sim: &Sim) -> Rc<RefCell<ObjectStore>> {
     }
     let store = Rc::new(RefCell::new(ObjectStore::new()));
     sim.register_service(Rc::clone(&store));
+    // Installing the store also installs the elaboration driver and teardown hook,
+    // so any model that creates hierarchy objects gets the barrier driven
+    // automatically. A hierarchy-free model never calls `store`, so its `run_until`
+    // stays hook-free and bit-identical (`doc/systemrs-design.md` §6b).
+    sim.set_elaboration_hook(crate::elaboration::drive);
+    sim.set_end_of_sim_hook(crate::elaboration::end_of_simulation);
     store
 }
 

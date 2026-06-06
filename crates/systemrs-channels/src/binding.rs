@@ -499,7 +499,9 @@ mod tests {
         let sim = Sim::new();
         let ch = channel(&sim, "ch");
         let p = Port::<Marker>::new(&sim, "p");
-        sim.run_until(SimTime::ZERO); // advances past the Build phase
-        assert!(p.bind_channel(&sim, ch).is_err());
+        p.bind_channel(&sim, ch).unwrap(); // valid bind during elaboration
+        sim.run_until(SimTime::ZERO); // drives elaboration; advances past Build
+        let ch2 = channel(&sim, "ch2");
+        assert!(p.bind_channel(&sim, ch2).is_err()); // binding after start → Err
     }
 }

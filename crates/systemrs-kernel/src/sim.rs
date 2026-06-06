@@ -253,6 +253,7 @@ impl Sim {
     /// * `end` - The time to stop at.
     pub fn run_until(&self, end: SimTime) {
         let _guard = ctx::install_current(&self.inner);
+        self.elaborate_once();
         self.ensure_started();
 
         loop {
@@ -273,6 +274,76 @@ impl Sim {
                     self.inner.borrow_mut().fire_timed_at(when);
                 }
             }
+        }
+    }
+
+    /// Drives the elaboration barrier exactly once, then leaves the Build phase.
+    ///
+    /// Runs the installed elaboration hook (the `systemrs-core` driver: the
+    /// construction fixpoint, the four lifecycle callbacks, and binding completion),
+    /// then commits any channel writes staged during elaboration. Guarded by the
+    /// `elaborated` latch so it runs once even across stepped `run_until` calls.
+    ///
+    /// A model with no hierarchy installs no hook and writes nothing during
+    /// elaboration, so this is a no-op that leaves the schedule bit-identical.
+    ///
+    /// # Panics
+    ///
+    /// Aborts (FATAL) if the elaboration hook returns an error (e.g. a binding or
+    /// cardinality failure), surfacing it at the barrier rather than mid-run.
+    fn elaborate_once(&self) {
+        let need = {
+            let g = self.inner.borrow();
+            g.phase == Phase::Build && !g.elaborated
+        };
+        if !need {
+            return;
+        }
+        let hook = self.inner.borrow().elaboration_hook.clone();
+        if let Some(hook) = hook {
+            let ctx = self.ctx();
+            if let Err(e) = hook(&ctx) {
+                systemrs_diag::report_fatal("SYSTEMRS/ELAB", &format!("{e}"));
+            }
+        }
+        self.run_initial_commit();
+        let mut g = self.inner.borrow_mut();
+        g.elaborated = true;
+        if g.phase == Phase::Build {
+            g.phase = Phase::Evaluate;
+        }
+    }
+
+    /// Commits channel writes staged during elaboration so they are visible at the
+    /// first evaluate (the initialization update pass, `doc/systemrs-design.md` §6c).
+    ///
+    /// A genuine no-op when nothing was written during elaboration: the empty-queue
+    /// guard means `change_stamp`/`delta_count` are untouched, keeping no-write
+    /// models bit-identical to the pre-elaboration-barrier scheduler.
+    fn run_initial_commit(&self) {
+        if self.inner.borrow().update_queue.is_empty() {
+            return;
+        }
+        self.commit_and_notify();
+    }
+
+    /// Fires the end-of-simulation teardown hook exactly once.
+    ///
+    /// Idempotent via the `ended` latch, so it is safe to call explicitly and again
+    /// from `Drop`. A no-op if no teardown hook is installed.
+    pub fn end_of_sim(&self) {
+        let hook = {
+            let mut g = self.inner.borrow_mut();
+            if g.ended {
+                return;
+            }
+            g.ended = true;
+            g.end_of_sim_hook.clone()
+        };
+        if let Some(hook) = hook {
+            let _guard = ctx::install_current(&self.inner);
+            let ctx = self.ctx();
+            hook(&ctx);
         }
     }
 
@@ -322,56 +393,65 @@ impl Sim {
                 break;
             }
 
-            // ---- UPDATE ----
-            let to_update = {
-                let mut g = self.inner.borrow_mut();
-                g.phase = Phase::Update;
-                g.change_stamp += 1; // bump before perform_update, non-empty only
-                let q = std::mem::take(&mut g.update_queue);
-                g.update_pending.clear();
-                q
-            };
-            let ctx = self.ctx();
-            for cid in to_update {
-                let chan = self.inner.borrow().chans.get(cid).cloned();
-                if let Some(chan) = chan {
-                    chan.update(&ctx);
-                }
-            }
-
-            // ---- DELTA NOTIFY (high-index → 0) ----
-            {
-                let mut g = self.inner.borrow_mut();
-                g.phase = Phase::Notify;
-                let evs = std::mem::take(&mut g.delta_events);
-                for ev in evs.into_iter().rev() {
-                    let fire = matches!(
-                        g.events.get(ev).map(|e| e.pending),
-                        Some(crate::event::Pending::Delta { .. })
-                    );
-                    if fire {
-                        g.events[ev].pending = crate::event::Pending::None;
-                        g.trigger(ev);
-                    }
-                }
-                // Resume zero-time (`wait(SC_ZERO_TIME)`) waiters for the next delta.
-                let wakes = std::mem::take(&mut g.delta_wakes);
-                for (pid, generation) in wakes {
-                    let live = g
-                        .procs
-                        .get(pid)
-                        .is_some_and(|p| !p.dead && p.wait_gen == generation);
-                    if live {
-                        g.make_runnable(pid);
-                    }
-                }
-                g.delta_count += 1; // non-empty only
-            }
+            self.commit_and_notify();
 
             if self.inner.borrow().runnable_empty() {
                 break;
             }
         }
+    }
+
+    /// Applies the pending channel updates (UPDATE) and fires the resulting delta
+    /// notifications (DELTA-NOTIFY) — the second and third phases of one non-empty
+    /// delta. Bumps `change_stamp` (before update) and `delta_count` (after notify).
+    ///
+    /// Shared verbatim by [`Sim::crunch`] and the elaboration init-commit pass
+    /// ([`Sim::run_initial_commit`]); a caller that must stay bit-identical on an
+    /// empty delta guards on an empty update queue before calling.
+    fn commit_and_notify(&self) {
+        // ---- UPDATE ----
+        let to_update = {
+            let mut g = self.inner.borrow_mut();
+            g.phase = Phase::Update;
+            g.change_stamp += 1; // bump before perform_update, non-empty only
+            let q = std::mem::take(&mut g.update_queue);
+            g.update_pending.clear();
+            q
+        };
+        let ctx = self.ctx();
+        for cid in to_update {
+            let chan = self.inner.borrow().chans.get(cid).cloned();
+            if let Some(chan) = chan {
+                chan.update(&ctx);
+            }
+        }
+
+        // ---- DELTA NOTIFY (high-index → 0) ----
+        let mut g = self.inner.borrow_mut();
+        g.phase = Phase::Notify;
+        let evs = std::mem::take(&mut g.delta_events);
+        for ev in evs.into_iter().rev() {
+            let fire = matches!(
+                g.events.get(ev).map(|e| e.pending),
+                Some(crate::event::Pending::Delta { .. })
+            );
+            if fire {
+                g.events[ev].pending = crate::event::Pending::None;
+                g.trigger(ev);
+            }
+        }
+        // Resume zero-time (`wait(SC_ZERO_TIME)`) waiters for the next delta.
+        let wakes = std::mem::take(&mut g.delta_wakes);
+        for (pid, generation) in wakes {
+            let live = g
+                .procs
+                .get(pid)
+                .is_some_and(|p| !p.dead && p.wait_gen == generation);
+            if live {
+                g.make_runnable(pid);
+            }
+        }
+        g.delta_count += 1; // non-empty only
     }
 
     /// Swaps the method push buffer into the pop buffer if the pop buffer is empty.
@@ -480,5 +560,14 @@ impl Sim {
 impl Default for Sim {
     fn default() -> Self {
         Sim::new()
+    }
+}
+
+impl Drop for Sim {
+    fn drop(&mut self) {
+        // Backstop: ensure `end_of_simulation` fires exactly once at teardown even
+        // if the model author never called `end_of_sim` explicitly. Idempotent via
+        // the `ended` latch; a no-op for hierarchy-free models (no hook installed).
+        self.end_of_sim();
     }
 }

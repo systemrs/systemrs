@@ -10,11 +10,14 @@
 > **stay on the flat `Sim` path** as a regression gate (a new platform example exercises
 > the hierarchy).
 >
-> **Progress:** **Phase A done** — M2-01 (✅ `ObjectId` + kernel hooks), M2-02 (✅
-> `ObjectStore`), M2-03 (✅ per-bucket registries). **Phase B done** — M2-04 (✅
-> `Interface`/`Port`/`Export` + two-phase record), M2-05 (✅ `complete_binding` flatten +
-> policy, borrow-safe). `cargo test` **59 green**, full skill sweep clean. Next: **Phase C
-> (M2-06 `ElaborationDriver` + M2-07 wire into `run_until`)** — the first schedule-touching step.
+> **Progress:** **Phase A** ✅ M2-01/02/03 (`ObjectId` + hooks, `ObjectStore`, per-bucket
+> registries). **Phase B** ✅ M2-04/05 (`Interface`/`Port`/`Export` + two-phase record;
+> `complete_binding` flatten + policy, borrow-safe). **Phase C** ✅ M2-06/07 (the
+> `ElaborationDriver` — per-bucket fixpoint + four callbacks in bucket order + init-commit —
+> wired into `run_until` via the dependency-inverted hook, fire-once + `end_of_sim` latches;
+> existing examples bit-identical). `cargo test` **64 green**, full skill sweep clean.
+> Next: **Phase D** (M2-08 `cx.module` scope closure · M2-10 `Kernel<Building/Running>` ·
+> M2-11 `#[module]`), then Phase E (M2-09 sockets) and Phase F (example + verify).
 
 ## Why M2 next
 

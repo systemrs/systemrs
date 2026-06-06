@@ -16,6 +16,7 @@
 mod attribute;
 mod build;
 mod elaborate;
+mod elaboration;
 mod name;
 mod object;
 

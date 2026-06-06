@@ -1,12 +1,12 @@
 //! Conformance tests for the primitive channels' evaluate/update discipline.
 
 use crate::{Clock, Fifo, Signal};
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
-use systemrs_core::Build;
-use systemrs_kernel::Sim;
+use systemrs_core::{Build, Elaborate, ObjectKind};
+use systemrs_kernel::{Ctx, Sim};
 use systemrs_time::SimTime;
 
 /// Verifies a signal write is only visible after the update phase: a same-delta
@@ -95,4 +95,43 @@ fn fifo_producer_consumer_in_order() {
 
     sim.run_until(SimTime::from_ns(100));
     assert_eq!(*out.lock().expect("lock"), vec![0, 1, 2, 3, 4]);
+}
+
+/// An elaborator that writes a signal during `before_end_of_elaboration`.
+struct ElabWriter {
+    /// The signal to write at the barrier.
+    sig: Signal<u32>,
+}
+
+impl Elaborate for ElabWriter {
+    fn before_end_of_elaboration(&mut self, ctx: &Ctx) {
+        self.sig.write(ctx, 42);
+    }
+}
+
+/// Verifies the initialization update pass: a value written during
+/// `before_end_of_elaboration` is committed before the first evaluate, and the
+/// commit advances `delta_count` exactly once (M2-07 golden accounting).
+#[test]
+fn elaboration_write_committed_before_first_evaluate() {
+    let sim = Sim::new();
+    let sig = Signal::<u32>::new(&sim, "s", 0);
+
+    // Registering an elaborator pulls in the object store, installing the
+    // elaboration driver so the barrier (and the init-commit pass) runs.
+    let store = systemrs_core::store(&sim);
+    let root = store.borrow().root();
+    store.borrow_mut().register_elaborator(
+        root,
+        ObjectKind::Module,
+        "writer",
+        Rc::new(RefCell::new(ElabWriter { sig })),
+    );
+
+    assert_eq!(sig.read(&sim.ctx()), 0);
+    sim.run_until(SimTime::ZERO);
+
+    // Committed by the init-commit pass, visible without any process running.
+    assert_eq!(sig.read(&sim.ctx()), 42);
+    assert_eq!(sim.delta_count(), 1);
 }
