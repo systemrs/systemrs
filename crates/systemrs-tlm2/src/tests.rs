@@ -1,9 +1,10 @@
 //! Base-protocol conformance: an initiator `b_transport`s to a memory target.
 
 use crate::{
-    ByteEnable, Command, GenericPayload, InitiatorSocket, Memory, Phase, ResponseStatus,
+    ByteEnable, Command, DmiAccess, GenericPayload, InitiatorSocket, Memory, Phase, ResponseStatus,
     TargetSocket, TlmSync, TxnPool,
 };
+use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -250,6 +251,76 @@ fn unregistered_nb_fw_returns_accepted() {
 
     sim.run_until(SimTime::from_ns(1));
     assert_eq!(*got.lock().expect("lock"), Some(TlmSync::Accepted));
+}
+
+/// Verifies a registered DMI grant returns a populated descriptor, and an
+/// unregistered target denies DMI (`None`).
+#[test]
+fn dmi_grant_and_deny() {
+    let sim = Sim::new();
+    let granting = TargetSocket::new(&sim, "g");
+    let plain = TargetSocket::new(&sim, "p");
+    let isock_g = InitiatorSocket::new(&sim, "ig");
+    let isock_p = InitiatorSocket::new(&sim, "ip");
+    isock_g.bind(&sim, &granting);
+    isock_p.bind(&sim, &plain);
+
+    granting.register_get_direct_mem_ptr(&sim, |_txn, dmi| {
+        dmi.set_access(DmiAccess {
+            read: true,
+            write: false,
+        });
+        dmi.start_address = 0;
+        dmi.end_address = 0xFF;
+        true
+    });
+
+    let pool = TxnPool::new();
+    let txn = pool.acquire();
+    let granted: Arc<Mutex<Option<DmiAccess>>> = Arc::new(Mutex::new(None));
+    let denied_is_none = Arc::new(Mutex::new(false));
+    let g = Arc::clone(&granted);
+    let d = Arc::clone(&denied_is_none);
+    sim.add_method("init", &[], true, move |cx| {
+        *g.lock().expect("lock") = isock_g.get_direct_mem_ptr(cx, &txn).map(|dmi| dmi.access());
+        *d.lock().expect("lock") = isock_p.get_direct_mem_ptr(cx, &txn).is_none();
+    });
+
+    sim.run_until(SimTime::from_ns(1));
+    assert_eq!(
+        *granted.lock().expect("lock"),
+        Some(DmiAccess {
+            read: true,
+            write: false
+        })
+    );
+    assert!(*denied_is_none.lock().expect("lock"));
+}
+
+/// Verifies the §3.9 HARD RULE: a `get_direct_mem_ptr` from inside an
+/// `invalidate_direct_mem_ptr` trips the re-entrancy guard (a clean FATAL).
+#[test]
+#[should_panic(expected = "invalidate")]
+fn dmi_get_inside_invalidate_is_fatal() {
+    let sim = Sim::new();
+    let target = TargetSocket::new(&sim, "t");
+    let isock = InitiatorSocket::new(&sim, "i");
+    isock.bind(&sim, &target);
+    target.register_get_direct_mem_ptr(&sim, |_txn, _dmi| true);
+
+    let pool = TxnPool::new();
+    let txn = pool.acquire();
+    let txn2 = Rc::clone(&txn);
+    isock.register_invalidate_direct_mem_ptr(&sim, move |cx, _start, _end| {
+        // ILLEGAL: calling get_direct_mem_ptr inside invalidate → guard trips.
+        isock.get_direct_mem_ptr(cx, &txn2);
+    });
+
+    sim.add_method("driver", &[], true, move |cx| {
+        target.invalidate_direct_mem_ptr(cx, 0, 0xFF);
+    });
+
+    sim.run_until(SimTime::from_ns(1));
 }
 
 /// Verifies an unbound initiator socket fails its `OneOrMore` port policy at the

@@ -1,15 +1,15 @@
 # Plan — Milestone 4: Temporal decoupling, AT protocol, PEQ, quantum keeper
 
-> Status: **exit criteria met** (2026-06-06). The roadmap phase after M2
-> ([systemrs-design.md](systemrs-design.md) §12). Design refs: §3.9, §3.11, §6d,
-> §10.1 (the `systemrs-tlm-utils` crate). See [STATUS.md](../STATUS.md).
+> Status: **✅ COMPLETE** (2026-06-06) — all 14 work items landed, all five exit criteria proven.
+> The roadmap phase after M2 ([systemrs-design.md](systemrs-design.md) §12). Design refs: §3.9,
+> §3.11, §6d, §10.1 (the `systemrs-tlm-utils` crate). See [STATUS.md](../STATUS.md).
 >
-> **Progress:** M4-01…10 + M4-14 ✅ — all five exit criteria (E1 quantum sync-on-grid,
-> E2 four-phase all-`TlmSync`, E3 LT→AT, E4 AT→LT, E5 PEQ delta-parity) proven; `cargo test`
-> **91 green**, full skill sweep clean; the LT path (rv32i/platform) is bit-identical. The single
-> kernel change was the additive `Ctx::spawn_thread`. **Deferred polish** (off the exit-criteria
-> path): M4-11 convenience sockets (b↔nb synthesis), M4-12 DMI (the plan time-boxed it to M5),
-> M4-13 reusable standalone `AtMemory` (the AT target is covered by the E2/E3 test fixtures).
+> **Progress:** all 14 items ✅. The five exit criteria (E1 quantum sync-on-grid, E2 four-phase
+> all-`TlmSync`, E3 LT→AT, E4 AT→LT, E5 PEQ delta-parity) are proven; the polish (M4-11 convenience
+> sockets with nb→b synthesis + multi/passthrough distinct-type stubs, M4-12 DMI with the §3.9
+> re-entrancy guard, M4-13 reusable `AtMemory`) also landed. `cargo test` **96 green** + doctests
+> (incl. a multi-socket compile-fail), full skill sweep clean; the LT path (rv32i/platform) is
+> bit-identical. The single kernel change was the additive `Ctx::spawn_thread`.
 >
 > Produced by a 5-phase design workflow (parallel readers → 3 plan drafts →
 > synthesize → adversarial critique → finalize), grounded in the design doc, the

@@ -26,6 +26,21 @@ use systemrs_tlm2::{Extension, InitiatorSocket, Phase, TargetSocket, TlmSync, Tx
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TxnId(u64);
 
+impl TxnId {
+    /// Creates a transaction id from a monotonic counter value.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The counter value.
+    ///
+    /// # Returns
+    ///
+    /// The [`TxnId`].
+    pub fn new(value: u64) -> Self {
+        TxnId(value)
+    }
+}
+
 /// A payload extension carrying the adapter's [`TxnId`], so a response transaction
 /// can be matched back to its pending state.
 struct TxnIdExt(TxnId);

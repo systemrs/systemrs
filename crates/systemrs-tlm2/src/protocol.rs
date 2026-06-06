@@ -6,11 +6,23 @@ use systemrs_time::SimTime;
 use crate::gp::GenericPayload;
 use crate::phase::{Phase, TlmSync};
 
+/// DMI access rights: plain booleans (`doc/systemrs-design.md` §6d SIMPLIFY — no
+/// `bitflags` dependency).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DmiAccess {
+    /// Whether reads are granted.
+    pub read: bool,
+
+    /// Whether writes are granted.
+    pub write: bool,
+}
+
 /// Direct-memory-interface access rights and window for a region.
 ///
-/// A simplified [`crate::Dmi`]: the design models the DMI backdoor as an arena
-/// handle/slice with a re-entrancy guard (`doc/systemrs-design.md` §6d); the
-/// examples do not exercise DMI, so only the descriptor is provided.
+/// The design models the DMI backdoor as an arena handle/slice with a re-entrancy
+/// guard (`doc/systemrs-design.md` §6d). This SIMPLIFY descriptor carries the access
+/// flags, the granted address window, and the modelled per-direction latencies; the
+/// re-entrancy guard lives in the socket registry.
 #[derive(Debug, Clone, Default)]
 pub struct Dmi {
     /// Whether reads are granted.
@@ -30,6 +42,26 @@ pub struct Dmi {
 
     /// The modelled write latency for the region.
     pub write_latency: SimTime,
+}
+
+impl Dmi {
+    /// Returns the access rights as a [`DmiAccess`].
+    pub fn access(&self) -> DmiAccess {
+        DmiAccess {
+            read: self.read_allowed,
+            write: self.write_allowed,
+        }
+    }
+
+    /// Sets the access rights from a [`DmiAccess`].
+    ///
+    /// # Arguments
+    ///
+    /// * `access` - The read/write grant.
+    pub fn set_access(&mut self, access: DmiAccess) {
+        self.read_allowed = access.read;
+        self.write_allowed = access.write;
+    }
 }
 
 /// A protocol traits struct: the payload and phase types a socket carries.

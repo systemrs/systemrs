@@ -30,7 +30,9 @@ pub use gp::{ByteEnable, Command, GenericPayload, ResponseStatus};
 pub use memory::Memory;
 pub use mm::{Txn, TxnPool};
 pub use phase::{Phase, PhaseId, TlmSync};
-pub use protocol::{BaseProtocol, BwBaseProtocol, BwTransport, Dmi, FwTransport, Protocol};
+pub use protocol::{
+    BaseProtocol, BwBaseProtocol, BwTransport, Dmi, DmiAccess, FwTransport, Protocol,
+};
 pub use socket::{InitiatorSocket, TargetSocket};
 
 #[cfg(test)]

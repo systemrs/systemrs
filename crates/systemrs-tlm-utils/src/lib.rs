@@ -13,14 +13,22 @@
 
 mod adapter_lt_at;
 mod at;
+mod at_memory;
 mod global_quantum;
+mod multi;
+mod passthrough;
 mod peq_cb;
 mod peq_get;
 mod quantum;
+mod simple_socket;
 
 pub use adapter_lt_at::{AtToLtAdapter, LtToAtAdapter, TxnId};
 pub use at::next_phase;
+pub use at_memory::AtMemory;
 pub use global_quantum::{GlobalQuantum, set_global_quantum};
+pub use multi::MultiTargetSocket;
+pub use passthrough::PassthroughTargetSocket;
 pub use peq_cb::PhaseQueue;
 pub use peq_get::PeqWithGet;
 pub use quantum::QuantumKeeper;
+pub use simple_socket::{SimpleInitiatorSocket, SimpleTargetSocket};

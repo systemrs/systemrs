@@ -48,12 +48,13 @@ pub use systemrs_core::{
 pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim};
 pub use systemrs_time::{Resolution, SimTime};
 pub use systemrs_tlm_utils::{
-    AtToLtAdapter, GlobalQuantum, LtToAtAdapter, PeqWithGet, PhaseQueue, QuantumKeeper, TxnId,
-    next_phase, set_global_quantum,
+    AtMemory, AtToLtAdapter, GlobalQuantum, LtToAtAdapter, MultiTargetSocket,
+    PassthroughTargetSocket, PeqWithGet, PhaseQueue, QuantumKeeper, SimpleInitiatorSocket,
+    SimpleTargetSocket, TxnId, next_phase, set_global_quantum,
 };
 pub use systemrs_tlm2::{
-    BwBaseProtocol, ByteEnable, Command, GenericPayload, InitiatorSocket, Memory, Phase,
-    ResponseStatus, TargetSocket, TlmSync, Txn, TxnPool,
+    BwBaseProtocol, ByteEnable, Command, Dmi, DmiAccess, GenericPayload, InitiatorSocket, Memory,
+    Phase, ResponseStatus, TargetSocket, TlmSync, Txn, TxnPool,
 };
 
 pub mod prelude;
