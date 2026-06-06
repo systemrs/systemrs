@@ -12,6 +12,7 @@ authors.workspace = true
 systemrs-kernel.workspace = true
 systemrs-time.workspace = true
 systemrs-diag.workspace = true
+slotmap = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true

@@ -11,11 +11,25 @@ use slotmap::{SecondaryMap, SlotMap};
 use systemrs_time::{Resolution, SimTime};
 
 use crate::channel::UpdatableChannel;
+use crate::ctx::Ctx;
 use crate::event::{Event, Pending};
 use crate::ids::{ChanId, EventId, ProcId};
 use crate::phase::Phase;
 use crate::process::{ProcKind, Process, WaitReq, WaitState};
 use crate::timed::{TimedEntry, TimedTarget};
+
+/// The elaboration hook: a fallible callback run exactly once at the elaboration
+/// barrier, before the first evaluate phase.
+///
+/// Dependency inversion (`doc/systemrs-design.md` §6b): the body lives in
+/// `systemrs-core` (the elaboration driver) but is invoked by the kernel through
+/// this trait object, so the kernel (L1) never names a core (L2) type. An `Err`
+/// is converted to a FATAL abort at the single call site in [`crate::Sim::run_until`].
+pub(crate) type ElaborationHook = Rc<dyn Fn(&Ctx) -> Result<(), systemrs_diag::ReportError>>;
+
+/// The end-of-simulation hook: an infallible teardown callback run exactly once
+/// (guarded by [`Inner::ended`]) when the simulation is finished.
+pub(crate) type EndOfSimHook = Rc<dyn Fn(&Ctx)>;
 
 /// All mutable kernel state, owned behind a single `Rc<RefCell<Inner>>`.
 ///
@@ -96,6 +110,21 @@ pub(crate) struct Inner {
 
     /// The frozen time resolution.
     pub(crate) resolution: Resolution,
+
+    /// The elaboration driver, installed by `systemrs-core`; run once at the
+    /// barrier (`doc/systemrs-design.md` §6b). `None` on a bare kernel (no
+    /// hierarchy), in which case elaboration is a no-op.
+    pub(crate) elaboration_hook: Option<ElaborationHook>,
+
+    /// The teardown callback, installed by `systemrs-core`; fires `end_of_simulation`.
+    pub(crate) end_of_sim_hook: Option<EndOfSimHook>,
+
+    /// Whether the elaboration hook has already run (drives it exactly once even
+    /// across multiple `run_until` calls).
+    pub(crate) elaborated: bool,
+
+    /// Whether the end-of-simulation hook has already fired (fire-exactly-once latch).
+    pub(crate) ended: bool,
 }
 
 impl Inner {
@@ -125,6 +154,10 @@ impl Inner {
             running: None,
             started: false,
             resolution,
+            elaboration_hook: None,
+            end_of_sim_hook: None,
+            elaborated: false,
+            ended: false,
         }
     }
 

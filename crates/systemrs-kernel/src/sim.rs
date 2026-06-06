@@ -10,6 +10,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use systemrs_diag::ReportError;
 use systemrs_runtime::{Fiber, FiberState};
 use systemrs_time::{Resolution, SimTime};
 
@@ -98,6 +99,37 @@ impl Sim {
             .borrow_mut()
             .services
             .insert(std::any::TypeId::of::<T>(), svc);
+    }
+
+    /// Installs the elaboration hook: a callback run exactly once at the
+    /// elaboration barrier (before the first evaluate phase).
+    ///
+    /// `systemrs-core` installs its elaboration driver here; the kernel invokes it
+    /// from [`Sim::run_until`] without naming a core type (`doc/systemrs-design.md`
+    /// §6b). An `Err` returned by the hook is converted to a FATAL abort at that
+    /// single call site.
+    ///
+    /// # Arguments
+    ///
+    /// * `hook` - The elaboration callback. It receives a [`Ctx`] and may fail.
+    pub fn set_elaboration_hook<F>(&self, hook: F)
+    where
+        F: Fn(&Ctx) -> Result<(), ReportError> + 'static,
+    {
+        self.inner.borrow_mut().elaboration_hook = Some(Rc::new(hook));
+    }
+
+    /// Installs the end-of-simulation hook: an infallible teardown callback fired
+    /// exactly once when the simulation finishes.
+    ///
+    /// # Arguments
+    ///
+    /// * `hook` - The teardown callback (receives a [`Ctx`]).
+    pub fn set_end_of_sim_hook<F>(&self, hook: F)
+    where
+        F: Fn(&Ctx) + 'static,
+    {
+        self.inner.borrow_mut().end_of_sim_hook = Some(Rc::new(hook));
     }
 
     /// Registers an `SC_METHOD` process.

@@ -15,4 +15,10 @@ slotmap::new_key_type! {
 
     /// Identifies an updatable primitive channel in the channel arena.
     pub struct ChanId;
+
+    /// Identifies an object in the elaboration object hierarchy (modules, ports,
+    /// exports, sockets, …). The store body lives in `systemrs-core`; the `Copy`
+    /// key lives here so lower layers can refer to objects by id without an upward
+    /// crate dependency (`doc/systemrs-design.md` §6b, §10.3).
+    pub struct ObjectId;
 }

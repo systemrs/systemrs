@@ -51,7 +51,7 @@ mod timed;
 
 pub use channel::UpdatableChannel;
 pub use ctx::Ctx;
-pub use ids::{ChanId, EventId, ProcId};
+pub use ids::{ChanId, EventId, ObjectId, ProcId};
 pub use phase::{Phase, Stage, Starvation};
 pub use process::WakeReason;
 pub use sim::Sim;

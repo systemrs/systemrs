@@ -2,6 +2,8 @@
 
 use systemrs_kernel::Ctx;
 
+use crate::object::ObjectKind;
+
 /// The four-phase elaboration lifecycle, as default-empty methods.
 ///
 /// Mirrors SystemC's `before_end_of_elaboration` / `end_of_elaboration` /
@@ -44,5 +46,20 @@ pub trait Elaborate {
     /// * `ctx` - The kernel handle.
     fn end_of_simulation(&mut self, ctx: &Ctx) {
         let _ = ctx;
+    }
+
+    /// Returns the object kind this elaborator registers as.
+    ///
+    /// This selects which per-bucket registry drives the elaborator's callbacks.
+    /// SystemC keeps separate `sc_port`/`sc_export`/`sc_prim_channel`/`sc_module`
+    /// registries whose construction-done cursors advance independently; the kind
+    /// fixes the bucket and the fixed inter-bucket order
+    /// (`port → export → prim_channel → module`). Most modules use the default.
+    ///
+    /// # Returns
+    ///
+    /// The elaborator's [`ObjectKind`] (default [`ObjectKind::Module`]).
+    fn object_kind(&self) -> ObjectKind {
+        ObjectKind::Module
     }
 }

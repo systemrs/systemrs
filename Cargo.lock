@@ -103,6 +103,7 @@ dependencies = [
 name = "systemrs-core"
 version = "0.1.0"
 dependencies = [
+ "slotmap",
  "systemrs-diag",
  "systemrs-kernel",
  "systemrs-time",
