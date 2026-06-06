@@ -169,6 +169,52 @@ fn spawn_thread_runs_in_current_run() {
     );
 }
 
+/// Verifies stage callbacks fire at `PostUpdate` (after a channel update commits)
+/// and `PreTimestep` (before time advances).
+#[test]
+fn stage_hooks_fire_at_boundaries() {
+    use crate::{Stage, UpdatableChannel};
+    use std::any::Any;
+    use std::rc::Rc;
+
+    /// A no-op updatable channel, just to make the update queue non-empty.
+    struct MockChan;
+    impl UpdatableChannel for MockChan {
+        fn update(&self, _ctx: &crate::Ctx) {}
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+    }
+
+    let sim = Sim::new();
+    let log: Arc<Mutex<Vec<(&'static str, u64)>>> = Arc::new(Mutex::new(Vec::new()));
+    let l = Arc::clone(&log);
+    sim.add_stage_hook(move |cx, stage| {
+        let tag = match stage {
+            Stage::PreTimestep => "pre",
+            Stage::PostUpdate => "post",
+        };
+        l.lock().expect("lock").push((tag, cx.now().units()));
+    });
+
+    let chan: Rc<dyn UpdatableChannel> = Rc::new(MockChan);
+    let id = sim.register_channel(chan);
+    sim.add_thread("t", &[], true, move |cx| {
+        cx.request_update(id); // → non-empty update → PostUpdate fires
+        cx.wait(SimTime::from_ns(5)); // → time advance → PreTimestep fires
+    });
+
+    sim.run_until(SimTime::from_ns(10));
+    let recs = log.lock().expect("lock");
+    assert!(recs.iter().any(|(t, _)| *t == "post"), "PostUpdate fired");
+    assert!(recs.iter().any(|(t, _)| *t == "pre"), "PreTimestep fired");
+    // PostUpdate observed at t=0 (the update committed at time 0).
+    assert_eq!(
+        recs.iter().find(|(t, _)| *t == "post").map(|&(_, n)| n),
+        Some(0)
+    );
+}
+
 /// Verifies a spawned body — which must be `Send` and so cannot capture an `Rc` —
 /// reaches per-spawn state via a registered service keyed by a `Copy` id (the
 /// construction the AT→LT adapter relies on).

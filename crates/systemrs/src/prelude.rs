@@ -17,14 +17,17 @@ pub use systemrs_core::{
     AttributeStore, Build, Builder, Building, Elaborate, Kernel, Module, ObjectId, ObjectKind,
     ObjectMeta, ObjectStore, Running, module, module_with, store,
 };
-pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim};
+pub use systemrs_diag::{ReportHandler, Severity, Verbosity};
+pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim, Stage};
 pub use systemrs_macros::module as module_macro;
 pub use systemrs_time::{Resolution, SimTime};
 pub use systemrs_tlm_utils::{
     AtToLtAdapter, GlobalQuantum, LtToAtAdapter, PeqWithGet, PhaseQueue, QuantumKeeper,
     set_global_quantum,
 };
+pub use systemrs_tlm1::{AnalysisFifo, AnalysisPort, AnalysisWrite};
 pub use systemrs_tlm2::{
     ByteEnable, Command, GenericPayload, InitiatorSocket, Memory, Phase, ResponseStatus,
     TargetSocket, TlmSync, Txn, TxnPool,
 };
+pub use systemrs_trace::{MemorySink, TraceEvent, TraceSink, Tracer, WriterSink};

@@ -88,7 +88,9 @@ dependencies = [
  "systemrs-macros",
  "systemrs-time",
  "systemrs-tlm-utils",
+ "systemrs-tlm1",
  "systemrs-tlm2",
+ "systemrs-trace",
 ]
 
 [[package]]
@@ -171,6 +173,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemrs-tlm1"
+version = "0.1.0"
+dependencies = [
+ "systemrs-kernel",
+ "systemrs-time",
+]
+
+[[package]]
 name = "systemrs-tlm2"
 version = "0.1.0"
 dependencies = [
@@ -179,6 +189,16 @@ dependencies = [
  "systemrs-diag",
  "systemrs-kernel",
  "systemrs-time",
+]
+
+[[package]]
+name = "systemrs-trace"
+version = "0.1.0"
+dependencies = [
+ "systemrs-channels",
+ "systemrs-kernel",
+ "systemrs-time",
+ "systemrs-tlm2",
 ]
 
 [[package]]

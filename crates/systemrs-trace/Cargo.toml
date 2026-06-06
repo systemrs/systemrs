@@ -1,0 +1,18 @@
+[package]
+name = "systemrs-trace"
+description = "Tracing/telemetry for SystemRS: stage-callback sampling, transaction-record sink, off-thread writer."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+systemrs-kernel.workspace = true
+systemrs-channels.workspace = true
+systemrs-tlm2.workspace = true
+systemrs-time.workspace = true
+
+[lints]
+workspace = true

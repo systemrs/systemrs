@@ -18,7 +18,7 @@ use crate::channel::UpdatableChannel;
 use crate::ctx::{self, Ctx};
 use crate::ids::{ChanId, EventId, ProcId};
 use crate::inner::Inner;
-use crate::phase::Phase;
+use crate::phase::{Phase, Stage};
 use crate::process::{ProcKind, Process, ProcessBody, WaitState, WakeReason};
 
 /// Wraps an `FnOnce(&Ctx) + Send` thread body in a [`Fiber`].
@@ -152,17 +152,34 @@ impl Sim {
         self.inner.borrow_mut().elaboration_hook = Some(Rc::new(hook));
     }
 
-    /// Installs the end-of-simulation hook: an infallible teardown callback fired
-    /// exactly once when the simulation finishes.
+    /// Registers an end-of-simulation teardown callback, fired exactly once when the
+    /// simulation finishes (multiple may be registered; they fire in order).
     ///
     /// # Arguments
     ///
     /// * `hook` - The teardown callback (receives a [`Ctx`]).
-    pub fn set_end_of_sim_hook<F>(&self, hook: F)
+    pub fn add_end_of_sim_hook<F>(&self, hook: F)
     where
         F: Fn(&Ctx) + 'static,
     {
-        self.inner.borrow_mut().end_of_sim_hook = Some(Rc::new(hook));
+        self.inner.borrow_mut().end_of_sim_hooks.push(Rc::new(hook));
+    }
+
+    /// Registers an observability stage callback, fired at each `PreTimestep` and
+    /// `PostUpdate` boundary (`doc/systemrs-design.md` §6e).
+    ///
+    /// The callback must be read-only with respect to the schedule (no
+    /// `notify`/`request_update`/`wait`); the kernel does not enforce this, but a
+    /// schedule-mutating sink would break the telemetry-on == telemetry-off invariant.
+    ///
+    /// # Arguments
+    ///
+    /// * `hook` - The stage callback (receives a [`Ctx`] and the [`Stage`]).
+    pub fn add_stage_hook<F>(&self, hook: F)
+    where
+        F: Fn(&Ctx, Stage) + 'static,
+    {
+        self.inner.borrow_mut().stage_hooks.push(Rc::new(hook));
     }
 
     /// Registers an `SC_METHOD` process.
@@ -358,23 +375,45 @@ impl Sim {
         self.elaborate_once();
     }
 
-    /// Fires the end-of-simulation teardown hook exactly once.
+    /// Fires the end-of-simulation teardown hooks exactly once, in registration
+    /// order.
     ///
     /// Idempotent via the `ended` latch, so it is safe to call explicitly and again
-    /// from `Drop`. A no-op if no teardown hook is installed.
+    /// from `Drop`. A no-op if no teardown hooks are installed.
     pub fn end_of_sim(&self) {
-        let hook = {
+        let hooks = {
             let mut g = self.inner.borrow_mut();
             if g.ended {
                 return;
             }
             g.ended = true;
-            g.end_of_sim_hook.clone()
+            g.end_of_sim_hooks.clone()
         };
-        if let Some(hook) = hook {
-            let _guard = ctx::install_current(&self.inner);
-            let ctx = self.ctx();
+        if hooks.is_empty() {
+            return;
+        }
+        let _guard = ctx::install_current(&self.inner);
+        let ctx = self.ctx();
+        for hook in hooks {
             hook(&ctx);
+        }
+    }
+
+    /// Fires the observability stage callbacks for `stage`, with no `Inner` borrow
+    /// held during the callbacks (the borrow-release discipline). A true no-op — no
+    /// allocation, no `Ctx`, no counter change — when no stage hook is registered, so
+    /// a model without tracing is unaffected.
+    fn fire_stage(&self, stage: Stage) {
+        let hooks = {
+            let g = self.inner.borrow();
+            if g.stage_hooks.is_empty() {
+                return;
+            }
+            g.stage_hooks.clone()
+        };
+        let ctx = self.ctx();
+        for hook in hooks {
+            hook(&ctx, stage);
         }
     }
 
@@ -456,6 +495,12 @@ impl Sim {
                 chan.update(&ctx);
             }
         }
+
+        // ---- POST-UPDATE (observability) ----
+        // Values are committed; the value-changed delta notifications are not yet
+        // processed and `delta_count` not yet incremented (the sample is tagged with
+        // the committing delta). A no-op with no stage hooks.
+        self.fire_stage(Stage::PostUpdate);
 
         // ---- DELTA NOTIFY (high-index → 0) ----
         let mut g = self.inner.borrow_mut();
@@ -579,9 +624,11 @@ impl Sim {
 
     /// Advances time to `when`, bumping the change stamp on every time advance.
     fn do_timestep(&self, when: SimTime) {
+        // Observability: fire PreTimestep before time advances (still at the old
+        // `now`), with no `Inner` borrow held. A no-op with no stage hooks.
+        self.fire_stage(Stage::PreTimestep);
         let mut g = self.inner.borrow_mut();
         debug_assert!(g.now < when, "time must advance monotonically");
-        // Tracing stage callbacks (PreTimestep) would fire here once -trace lands.
         g.now = when;
         g.change_stamp += 1; // bump on every time advance (sc_simcontext.cpp:986)
         g.delta_count_baseline_at_now = g.delta_count;

@@ -1,0 +1,16 @@
+[package]
+name = "systemrs-tlm1"
+description = "TLM-1.0 for SystemRS: the analysis sublayer (ports/fifo/triple) for non-intrusive telemetry."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+systemrs-kernel.workspace = true
+systemrs-time.workspace = true
+
+[lints]
+workspace = true

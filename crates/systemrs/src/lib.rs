@@ -33,7 +33,9 @@ pub use systemrs_core as core;
 pub use systemrs_diag as diag;
 pub use systemrs_kernel as kernel;
 pub use systemrs_tlm_utils as tlm_utils;
+pub use systemrs_tlm1 as tlm1;
 pub use systemrs_tlm2 as tlm2;
+pub use systemrs_trace as trace;
 
 // The `#[module]` attribute macro (the facade is the only crate that may re-export
 // it without forming a dependency cycle; the macro emits `::systemrs::`-paths).
@@ -45,16 +47,21 @@ pub use systemrs_core::{
     AttributeStore, Build, Builder, Building, Elaborate, Kernel, Module, ObjectId, ObjectKind,
     ObjectMeta, ObjectStore, Running, module, module_with, store,
 };
-pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim};
+pub use systemrs_diag::{ActionFlags, ReportHandler, Severity, Verbosity};
+pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim, Stage};
 pub use systemrs_time::{Resolution, SimTime};
 pub use systemrs_tlm_utils::{
     AtMemory, AtToLtAdapter, GlobalQuantum, LtToAtAdapter, MultiTargetSocket,
     PassthroughTargetSocket, PeqWithGet, PhaseQueue, QuantumKeeper, SimpleInitiatorSocket,
     SimpleTargetSocket, TxnId, next_phase, set_global_quantum,
 };
+pub use systemrs_tlm1::{AnalysisFifo, AnalysisPort, AnalysisTriple, AnalysisWrite};
 pub use systemrs_tlm2::{
     BwBaseProtocol, ByteEnable, Command, Dmi, DmiAccess, GenericPayload, InitiatorSocket, Memory,
     Phase, ResponseStatus, TargetSocket, TlmSync, Txn, TxnPool,
+};
+pub use systemrs_trace::{
+    MemorySink, TraceCommand, TraceEvent, TraceResponse, TraceSink, Tracer, TxnRecord, WriterSink,
 };
 
 pub mod prelude;

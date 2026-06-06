@@ -14,7 +14,7 @@ use crate::channel::UpdatableChannel;
 use crate::ctx::Ctx;
 use crate::event::{Event, Pending};
 use crate::ids::{ChanId, EventId, ProcId};
-use crate::phase::Phase;
+use crate::phase::{Phase, Stage};
 use crate::process::{ProcKind, Process, WaitReq, WaitState};
 use crate::timed::{TimedEntry, TimedTarget};
 
@@ -28,8 +28,15 @@ use crate::timed::{TimedEntry, TimedTarget};
 pub(crate) type ElaborationHook = Rc<dyn Fn(&Ctx) -> Result<(), systemrs_diag::ReportError>>;
 
 /// The end-of-simulation hook: an infallible teardown callback run exactly once
-/// (guarded by [`Inner::ended`]) when the simulation is finished.
+/// (guarded by [`Inner::ended`]) when the simulation is finished. Held as a list so
+/// independent subsystems (the elaboration driver, a trace writer flush) can each
+/// register one without clobbering another.
 pub(crate) type EndOfSimHook = Rc<dyn Fn(&Ctx)>;
+
+/// A stage callback: fired at each [`Stage`] boundary (`PreTimestep`/`PostUpdate`)
+/// for observability (`doc/systemrs-design.md` §6e). Must be read-only with respect
+/// to the schedule (no `notify`/`request_update`/`wait`).
+pub(crate) type StageHook = Rc<dyn Fn(&Ctx, Stage)>;
 
 /// All mutable kernel state, owned behind a single `Rc<RefCell<Inner>>`.
 ///
@@ -116,14 +123,19 @@ pub(crate) struct Inner {
     /// hierarchy), in which case elaboration is a no-op.
     pub(crate) elaboration_hook: Option<ElaborationHook>,
 
-    /// The teardown callback, installed by `systemrs-core`; fires `end_of_simulation`.
-    pub(crate) end_of_sim_hook: Option<EndOfSimHook>,
+    /// Teardown callbacks (elaboration `end_of_simulation`, trace writer flush, …);
+    /// fired exactly once at end-of-sim, in registration order.
+    pub(crate) end_of_sim_hooks: Vec<EndOfSimHook>,
+
+    /// Observability stage callbacks, fired at `PreTimestep`/`PostUpdate`. Empty by
+    /// default — the firing sites short-circuit so a hierarchy-free run is unaffected.
+    pub(crate) stage_hooks: Vec<StageHook>,
 
     /// Whether the elaboration hook has already run (drives it exactly once even
     /// across multiple `run_until` calls).
     pub(crate) elaborated: bool,
 
-    /// Whether the end-of-simulation hook has already fired (fire-exactly-once latch).
+    /// Whether the end-of-simulation hooks have already fired (fire-once latch).
     pub(crate) ended: bool,
 }
 
@@ -155,7 +167,8 @@ impl Inner {
             started: false,
             resolution,
             elaboration_hook: None,
-            end_of_sim_hook: None,
+            end_of_sim_hooks: Vec::new(),
+            stage_hooks: Vec::new(),
             elaborated: false,
             ended: false,
         }

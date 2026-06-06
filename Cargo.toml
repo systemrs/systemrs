@@ -15,8 +15,10 @@ members = [
     "crates/systemrs-kernel",
     "crates/systemrs-core",
     "crates/systemrs-channels",
+    "crates/systemrs-tlm1",
     "crates/systemrs-tlm2",
     "crates/systemrs-tlm-utils",
+    "crates/systemrs-trace",
     "crates/systemrs",
     "crates/systemrs-examples",
 ]
@@ -37,8 +39,10 @@ systemrs-runtime = { path = "crates/systemrs-runtime", version = "0.1.0" }
 systemrs-kernel = { path = "crates/systemrs-kernel", version = "0.1.0" }
 systemrs-core = { path = "crates/systemrs-core", version = "0.1.0" }
 systemrs-channels = { path = "crates/systemrs-channels", version = "0.1.0" }
+systemrs-tlm1 = { path = "crates/systemrs-tlm1", version = "0.1.0" }
 systemrs-tlm2 = { path = "crates/systemrs-tlm2", version = "0.1.0" }
 systemrs-tlm-utils = { path = "crates/systemrs-tlm-utils", version = "0.1.0" }
+systemrs-trace = { path = "crates/systemrs-trace", version = "0.1.0" }
 systemrs-macros = { path = "crates/systemrs-macros", version = "0.1.0" }
 systemrs = { path = "crates/systemrs", version = "0.1.0" }
 

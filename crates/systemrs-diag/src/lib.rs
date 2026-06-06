@@ -6,9 +6,13 @@
 //! (recoverable — testbenches inject errors), and FATAL aborts the process with a
 //! diagnostic. This crate is the L0 leaf every other crate reports through.
 
+mod action;
+mod handler;
 mod report;
 mod severity;
 
+pub use action::{ActionFlags, Verbosity};
+pub use handler::ReportHandler;
 pub use report::{Report, ReportError};
 pub use severity::Severity;
 

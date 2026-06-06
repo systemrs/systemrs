@@ -532,7 +532,7 @@ pub fn store(sim: &Sim) -> Rc<RefCell<ObjectStore>> {
     // automatically. A hierarchy-free model never calls `store`, so its `run_until`
     // stays hook-free and bit-identical (`doc/systemrs-design.md` §6b).
     sim.set_elaboration_hook(crate::elaboration::drive);
-    sim.set_end_of_sim_hook(crate::elaboration::end_of_simulation);
+    sim.add_end_of_sim_hook(crate::elaboration::end_of_simulation);
     store
 }
 
