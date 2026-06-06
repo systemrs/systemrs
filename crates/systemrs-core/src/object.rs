@@ -435,6 +435,26 @@ impl ObjectStore {
             .collect()
     }
 
+    /// Attaches an elaborator to an already-inserted object, routing it into the
+    /// bucket for the object's kind.
+    ///
+    /// Used for modules, whose object is inserted first (to open the hierarchy
+    /// scope under which children are built) and whose instance is registered as an
+    /// elaborator afterwards. A no-op if `id` is stale or not an elaborator kind.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The object to attach the elaborator to.
+    /// * `elaborator` - The elaborator handle to drive.
+    pub(crate) fn attach_elaborator(&mut self, id: ObjectId, elaborator: Elaborator) {
+        let Some(kind) = self.kind(id) else {
+            return;
+        };
+        if let Some(bucket) = self.bucket_for_mut(kind) {
+            bucket.entries.push((id, elaborator));
+        }
+    }
+
     /// Returns clones of every elaborator in `kind`'s bucket (for the
     /// `end_of_elaboration`/`start_of_simulation`/`end_of_simulation` passes).
     ///

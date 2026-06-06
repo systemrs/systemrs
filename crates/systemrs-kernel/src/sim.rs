@@ -327,6 +327,16 @@ impl Sim {
         self.commit_and_notify();
     }
 
+    /// Drives the elaboration barrier now, without running any processes.
+    ///
+    /// Lets a front-end (e.g. the `Kernel<Building>` typestate) complete elaboration
+    /// eagerly so that a subsequent [`Sim::run_until`] is pure stepping. Idempotent
+    /// via the same `elaborated` latch `run_until` uses.
+    pub fn elaborate(&self) {
+        let _guard = ctx::install_current(&self.inner);
+        self.elaborate_once();
+    }
+
     /// Fires the end-of-simulation teardown hook exactly once.
     ///
     /// Idempotent via the `ended` latch, so it is safe to call explicitly and again

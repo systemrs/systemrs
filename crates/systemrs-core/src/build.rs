@@ -66,6 +66,30 @@ pub struct MethodBuilder<'s> {
     initialize: bool,
 }
 
+impl<'s> MethodBuilder<'s> {
+    /// Creates a method builder with an explicit, already-qualified `name`.
+    ///
+    /// Used by the module [`crate::Builder`] to register a hierarchically-named
+    /// process; the public entry point is [`Build::method`].
+    ///
+    /// # Arguments
+    ///
+    /// * `sim` - The simulation under construction.
+    /// * `name` - The fully-qualified process name.
+    ///
+    /// # Returns
+    ///
+    /// A [`MethodBuilder`] with default (initialize-on-start) sensitivity.
+    pub(crate) fn for_name(sim: &'s Sim, name: String) -> Self {
+        MethodBuilder {
+            sim,
+            name,
+            sens: Vec::new(),
+            initialize: true,
+        }
+    }
+}
+
 impl MethodBuilder<'_> {
     /// Adds `event` to the method's static sensitivity.
     ///
@@ -116,6 +140,30 @@ pub struct ThreadBuilder<'s> {
 
     /// Whether the thread starts at start of simulation.
     initialize: bool,
+}
+
+impl<'s> ThreadBuilder<'s> {
+    /// Creates a thread builder with an explicit, already-qualified `name`.
+    ///
+    /// Used by the module [`crate::Builder`]; the public entry point is
+    /// [`Build::thread`].
+    ///
+    /// # Arguments
+    ///
+    /// * `sim` - The simulation under construction.
+    /// * `name` - The fully-qualified process name.
+    ///
+    /// # Returns
+    ///
+    /// A [`ThreadBuilder`] with default (initialize-on-start) sensitivity.
+    pub(crate) fn for_name(sim: &'s Sim, name: String) -> Self {
+        ThreadBuilder {
+            sim,
+            name,
+            sens: Vec::new(),
+            initialize: true,
+        }
+    }
 }
 
 impl ThreadBuilder<'_> {

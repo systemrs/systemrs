@@ -12,6 +12,7 @@ members = [
     "crates/systemrs-diag",
     "crates/systemrs-time",
     "crates/systemrs-runtime",
+    "crates/systemrs-macros",
     "crates/systemrs-kernel",
     "crates/systemrs-core",
     "crates/systemrs-channels",
@@ -37,10 +38,21 @@ systemrs-kernel = { path = "crates/systemrs-kernel", version = "0.1.0" }
 systemrs-core = { path = "crates/systemrs-core", version = "0.1.0" }
 systemrs-channels = { path = "crates/systemrs-channels", version = "0.1.0" }
 systemrs-tlm2 = { path = "crates/systemrs-tlm2", version = "0.1.0" }
+systemrs-macros = { path = "crates/systemrs-macros", version = "0.1.0" }
 systemrs = { path = "crates/systemrs", version = "0.1.0" }
 
 # External crates, default-features off per the Rust skill.
 slotmap = { version = "1", default-features = false }
+# Proc-macro toolchain for `systemrs-macros` (the `#[module]` attribute). The
+# `proc-macro` feature is required to interoperate with the compiler's macro API.
+proc-macro2 = { version = "1", default-features = false, features = ["proc-macro"] }
+quote = { version = "1", default-features = false, features = ["proc-macro"] }
+syn = { version = "2", default-features = false, features = [
+    "derive",
+    "parsing",
+    "printing",
+    "proc-macro",
+] }
 # `unwind` is required so a suspended fiber (a thread parked at wait() when the
 # simulation ends) is force-unwound on drop, running its destructors.
 corosensei = { version = "0.3", default-features = false, features = [

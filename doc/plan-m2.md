@@ -16,8 +16,12 @@
 > `ElaborationDriver` — per-bucket fixpoint + four callbacks in bucket order + init-commit —
 > wired into `run_until` via the dependency-inverted hook, fire-once + `end_of_sim` latches;
 > existing examples bit-identical). `cargo test` **64 green**, full skill sweep clean.
-> Next: **Phase D** (M2-08 `cx.module` scope closure · M2-10 `Kernel<Building/Running>` ·
-> M2-11 `#[module]`), then Phase E (M2-09 sockets) and Phase F (example + verify).
+> **Phase D** ✅ M2-08/10/11 (`module(name,|m|{…})` scope closures + `Builder` + `ScopeGuard`;
+> `Kernel<Building/Running>` typestate front door — compile-time bind-after-start guard;
+> `systemrs-macros` + `#[module]` proc-macro, path-qualified, facade-routed test). `cargo test`
+> **70 green**, full skill sweep clean; `systemrs-macros` is the 10th crate.
+> Next: **Phase E** (M2-09 reconcile TLM sockets onto a fw `Port`+`Export` pair), then
+> **Phase F** (M2-12 AttributeStore · M2-13 platform example proving the 7 exit criteria · M2-14 facade+sweep).
 
 ## Why M2 next
 

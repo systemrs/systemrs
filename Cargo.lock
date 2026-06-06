@@ -85,6 +85,7 @@ dependencies = [
  "systemrs-core",
  "systemrs-diag",
  "systemrs-kernel",
+ "systemrs-macros",
  "systemrs-time",
  "systemrs-tlm2",
 ]
@@ -131,6 +132,15 @@ dependencies = [
  "systemrs-diag",
  "systemrs-runtime",
  "systemrs-time",
+]
+
+[[package]]
+name = "systemrs-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

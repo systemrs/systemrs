@@ -17,12 +17,17 @@ mod attribute;
 mod build;
 mod elaborate;
 mod elaboration;
+mod hierarchy;
+mod kernel_typestate;
+mod module;
 mod name;
 mod object;
 
 pub use attribute::AttributeStore;
 pub use build::{Build, MethodBuilder, ThreadBuilder};
 pub use elaborate::Elaborate;
+pub use kernel_typestate::{Building, Kernel, Running};
+pub use module::{Builder, Module, module, module_with};
 pub use object::{ObjectKind, ObjectMeta, ObjectStore, store};
 
 // Re-export the kernel surface model authors touch, so a single `use` of the

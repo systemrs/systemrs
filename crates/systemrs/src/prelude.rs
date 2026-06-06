@@ -12,9 +12,13 @@
 //! sim.run_until(SimTime::from_ns(100));
 //! ```
 
-pub use systemrs_channels::{Buffer, Clock, Fifo, Signal};
-pub use systemrs_core::{Build, Elaborate};
+pub use systemrs_channels::{Buffer, Clock, Export, Fifo, Interface, Port, PortPolicy, Signal};
+pub use systemrs_core::{
+    Build, Builder, Building, Elaborate, Kernel, Module, ObjectId, ObjectKind, Running, module,
+    module_with,
+};
 pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim};
+pub use systemrs_macros::module as module_macro;
 pub use systemrs_time::{Resolution, SimTime};
 pub use systemrs_tlm2::{
     ByteEnable, Command, GenericPayload, InitiatorSocket, Memory, Phase, ResponseStatus,

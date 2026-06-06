@@ -10,13 +10,13 @@ this file's **Status** column is the *as-built* reality.
 
 **Legend:** ✅ Done · 🟡 Partial · ⬜ Missing (planned, not built) · ⏸️ Deferred (intentionally post-MVP) · ❌ Dropped (explicitly out of scope, §4)
 
-**Build health (2026-06-06):** `cargo test --workspace` → **64 passed, 0 failed**; `fmt`/`clippy -D warnings`/`build --release`/`doc`/`deny`/`audit` all clean. 9 of 14 planned crates exist.
+**Build health (2026-06-06):** `cargo test --workspace` → **70 passed, 0 failed**; `fmt`/`clippy -D warnings`/`build --release`/`doc`/`deny`/`audit` all clean. **10 of 14** planned crates exist (`systemrs-macros` added in M2-11).
 
 **Feature tally (114 tracked, pre-M2 baseline):** ✅ 36 DONE  ·  🟡 17 PARTIAL  ·  ⬜ 39 MISSING  ·  ⏸️ 14 DEFERRED  ·  ❌ 8 DROPPED _(M2 rows below updated as Phase A lands)_
 
 ## Where we are
 
-M0 (delta loop) and M1 (process model) are **done and bit-faithful**; the M3 **LT TLM-2.0** slice is **done** (generic payload, pool MM, extensions, `b_transport`, `transport_dbg`, id-keyed sockets). **M2 (modules / hierarchy / ports / exports / elaboration) is now in progress** — Phases A–C have landed: the `ObjectStore` foundation + kernel hooks, the generic `Port`/`Export` two-phase binding + `complete_binding`, and the elaboration driver wired into `run_until` (construction fixpoint + lifecycle callbacks + init-commit). Remaining: `cx.module` (M2-08), the `Kernel` typestate (M2-10), the `#[module]` macro (M2-11), and the socket reconciliation (M2-09) ([doc/plan-m2.md](doc/plan-m2.md)). M4 (AT/PEQ/quantum), M5 (observability/tracing/TLM-1), M6 (twin layer), M7+ and §11 interop are not started; their TLM-2 contract types exist only as inert trait-default stubs.
+M0 (delta loop) and M1 (process model) are **done and bit-faithful**; the M3 **LT TLM-2.0** slice is **done** (generic payload, pool MM, extensions, `b_transport`, `transport_dbg`, id-keyed sockets). **M2 (modules / hierarchy / ports / exports / elaboration) is now in progress** — Phases A–D have landed: the `ObjectStore` foundation + kernel hooks, the generic `Port`/`Export` two-phase binding + `complete_binding`, the elaboration driver wired into `run_until`, and the user-facing front door (`module(name,|m|{…})` scope closures + `Builder`, the `Kernel<Building/Running>` typestate, and the `#[module]` macro). The remaining phase is the TLM socket reconciliation onto ports/exports (M2-09), plus the platform example (M2-13) ([doc/plan-m2.md](doc/plan-m2.md)). M4 (AT/PEQ/quantum), M5 (observability/tracing/TLM-1), M6 (twin layer), M7+ and §11 interop are not started; their TLM-2 contract types exist only as inert trait-default stubs.
 
 👉 **Next phase plan:** [doc/plan-m2.md](doc/plan-m2.md) — Milestone 2.
 
@@ -30,7 +30,7 @@ _§10 (14-crate plan)_
 
 | | Feature | Decision | Design | Evidence / Notes |
 |---|---|---|---|---|
-| ✅ | Workspace (resolver 3, edition 2024, MSRV 1.90, Apache-2.0) | REPLICATE | §10.4 / §13 naming | Cargo.toml (resolver=3, edition 2024, rust-version 1.90, license Apache-2.0, workspace.lints + workspace.dependencies) — 9 of 14 crates present. Lints (clippy all+pedantic, missing_docs, unsafe_code=warn) and shared deps configured per skill. |
+| ✅ | Workspace (resolver 3, edition 2024, MSRV 1.90, Apache-2.0) | REPLICATE | §10.4 / §13 naming | Cargo.toml (resolver=3, edition 2024, rust-version 1.90, license Apache-2.0, workspace.lints + workspace.dependencies) — 10 of 14 crates present. Lints (clippy all+pedantic, missing_docs, unsafe_code=warn) and shared deps configured per skill. |
 | ✅ | systemrs-diag (L0, reporting) | REPLICATE | §10.1 | crates/systemrs-diag/src/{lib,report,severity}.rs |
 | ✅ | systemrs-time (L0, SimTime) | REPLICATE | §10.1 | crates/systemrs-time/src/{sim_time,resolution}.rs |
 | ✅ | systemrs-runtime (L0, coroutine backend) | REPLICATE | §10.1 | crates/systemrs-runtime/src/stackful.rs (corosensei Fiber + suspend()) |
@@ -40,7 +40,7 @@ _§10 (14-crate plan)_
 | 🟡 | systemrs-tlm2 (L4, GP+MM+extensions, transport, phases, DMI, sockets) | REPLICATE | §10.1 | crates/systemrs-tlm2/src/{gp,mm,extension,protocol,socket,phase,memory}.rs — LT path (GP, MM pool, extensions, b_transport, transport_dbg, sockets) done; AT/nb_transport/DMI only as unused trait-default stubs. |
 | ✅ | systemrs (L6, facade/prelude) | REPLICATE | §10.1 | crates/systemrs/src/{lib,prelude}.rs (re-exports all built crates + prelude) |
 | ✅ | systemrs-examples (L7, conformance/integration tests) | REPLICATE | §10.1 | crates/systemrs-examples/{src/{counter,rv32i},examples,tests/integration}.rs (counter + RV32I hart; 3 integration + 10 unit tests pass) — Dev-deps insta/criterion from §10.1 not yet used. |
-| ⬜ | systemrs-macros (L0, proc-macros / #[module]) | SIMPLIFY | §10.1, §4 modules | Crate does not exist; not in workspace members. #[module] macro absent. |
+| ✅ | systemrs-macros (L0, proc-macros / #[module]) | SIMPLIFY | §10.1, §4 modules | M2-11: `crates/systemrs-macros` (proc-macro2/quote/syn only); `#[module]` attribute emits `::systemrs::Module` (path-qualified, no facade cycle). Facade-routed test in `systemrs-examples`. |
 | ⬜ | systemrs-tlm1 (L4, put/get/peek + analysis ports) | REPLICATE | §10.1, §3.7 | Crate does not exist. |
 | ⬜ | systemrs-tlm-utils (L5, quantum keeper, PEQs, convenience sockets, LT/AT adapters) | REPLICATE | §10.1, §3.11 | Crate does not exist; no quantum/PEQ code anywhere (only doc-comment mentions). |
 | ⬜ | systemrs-trace (L5, sampling, recorders, VCD/FST) | SIMPLIFY | §10.1, §3.12 | Crate does not exist; sim.rs:432 comment notes stage callbacks would fire 'once -trace lands'. |
@@ -103,14 +103,14 @@ _M1 (§3.2, §4 Processes, §6a)_
 
 _M2 (§3.4, §3.5, §4, §6b)_
 
-> **M2 in progress** — Phases A–C landed (M2-01…07): `ObjectId` + kernel hooks; the `ObjectStore` arena + four per-bucket elaborator registries; the generic `Interface`/`Port`/`Export` two-phase binding with `complete_binding`; **and the elaboration driver** (per-bucket construction fixpoint, the four lifecycle callbacks in bucket order, `complete_binding`, init-commit pass) wired into `run_until` via the dependency-inverted hook, fire-once + end-of-sim latches. The remaining phases are `cx.module` (M2-08), the `Kernel` typestate (M2-10), the `#[module]` macro (M2-11), and the socket reconciliation (M2-09). See [doc/plan-m2.md](doc/plan-m2.md).
+> **M2 in progress** — Phases A–D landed (M2-01…08, 10, 11): the `ObjectStore` arena + per-bucket registries; the generic `Interface`/`Port`/`Export` two-phase binding + `complete_binding`; the elaboration driver wired into `run_until`; **and the user-facing front door** — `module(name, |m| {…})` scope closures with `Builder` + `ScopeGuard`, the `Kernel<Building/Running>` typestate (compile-time bind-after-start guard), and the `#[module]` proc-macro. The **only remaining phase is the socket reconciliation (M2-09)** plus the platform example/AttributeStore polish (M2-12/13). See [doc/plan-m2.md](doc/plan-m2.md).
 
 | | Feature | Decision | Design | Evidence / Notes |
 |---|---|---|---|---|
 | ✅ | Four lifecycle callbacks + construction fixpoint | REPLICATE | §4 Modules; §6b; §12 M2 | M2-06/07: `core/elaboration.rs` `drive` runs the per-bucket construction fixpoint + the four callbacks in bucket order (port→export→prim_channel→module) with the clone-Rc-out borrow-release discipline; wired into `Sim::run_until` via the dependency-inverted hook (`elaborate_once`), with init-commit pass + fire-once/`end_of_sim` latches. 5 tests (order, fixpoint, re-entrancy, init-commit, once). Existing examples bit-identical. |
-| ⬜ | #[module] / SC_MODULE / SC_CTOR macro | SIMPLIFY | §4 Modules | systemrs-macros crate absent; planned M2-11. |
+| ✅ | #[module] / SC_MODULE / SC_CTOR macro | SIMPLIFY | §4 Modules | M2-11: `#[module]` attribute (`systemrs-macros`) generates the `Module` marker impl, path-qualified to avoid a facade cycle. |
 | ✅ | Object hierarchy + naming + uniqueness | REPLICATE | §4 Modules; §6b | M2-02: `core/object.rs` `ObjectStore` (`SlotMap<ObjectId, ObjectMeta>` + name table + scope stack + implicit root); dot-joined unique names, sanitisation, deterministic suffixing. 9 unit tests. |
-| ⬜ | sc_module_name LIFO-stack -> cx.module(name, \|m\| {..}) scope closures | DROP mechanism, REPLICATE outcome | §4 Modules | Scope stack (`push_scope`/`pop_scope`) exists in `ObjectStore`; the `cx.module` closure + `Builder<M>` are M2-08. |
+| ✅ | sc_module_name LIFO-stack -> cx.module(name, \|m\| {..}) scope closures | DROP mechanism, REPLICATE outcome | §4 Modules | M2-08: `core/module.rs` `module`/`module_with` + `Builder` (nested modules, `m.method`/`m.thread`); `core/hierarchy.rs` `ScopeGuard` RAII push/pop. `Kernel<Building/Running>` typestate front door (M2-10). 5 tests. |
 | 🟡 | Orphan-children-to-root-on-drop via arena re-parent | REPLICATE | §4 Modules | M2-02: `ObjectStore::reparent_children_to_root` (pure-id reparent) + unit test present; full destruction-order integration deferred (§12 M7+). |
 | 🟡 | Interface/port/export + two-phase deferred bind + complete_binding | REPLICATE | §4 Ports; §12 M2 | M2-04/05: `channels/{interface,port,export,binding}.rs` — `Port<IF>`/`Export<IF>` Copy handles, id-keyed `PortRegistry`, two-phase `record` + `complete` (idempotent, cycle-guarded), **auto-driven at the barrier** via `BindingElaborator::end_of_elaboration` (M2-06). 10 unit tests. Not yet used by TLM sockets (M2-09). |
 | ✅ | Multiports + port-policy counting | REPLICATE | §4 Ports | M2-04/05: `PortPolicy` (`OneOrMore`/`AllBound`/`ZeroOrMore`) enforced at end of `complete`; multiport flatten preserves order. Tested. |
