@@ -45,6 +45,11 @@ systemrs-tlm2 = { path = "crates/systemrs-tlm2", version = "0.1.0" }
 systemrs-tlm-utils = { path = "crates/systemrs-tlm-utils", version = "0.1.0" }
 systemrs-trace = { path = "crates/systemrs-trace", version = "0.1.0" }
 systemrs-twin = { path = "crates/systemrs-twin", version = "0.1.0" }
+
+# External: bit-accurate fixed-point (Q-notation) for the DSP examples. SystemRS
+# deliberately drops `sc_dt` (design §3.12) — models bring their own datatypes and
+# the generic payload carries the bytes; `qfixed` demonstrates exactly that.
+qfixed = { git = "https://github.com/systemrs/qfixed.git" }
 systemrs-macros = { path = "crates/systemrs-macros", version = "0.1.0" }
 systemrs = { path = "crates/systemrs", version = "0.1.0" }
 

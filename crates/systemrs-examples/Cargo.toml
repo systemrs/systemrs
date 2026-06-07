@@ -1,6 +1,6 @@
 [package]
 name = "systemrs-examples"
-description = "Runnable SystemRS examples: an incrementing counter and a basic RV32I CPU hart."
+description = "Runnable SystemRS examples: a gated counter, an RV32I CPU hart, and a fixed-point guitar reverb."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,7 @@ publish = false
 
 [dependencies]
 systemrs.workspace = true
+qfixed.workspace = true
 
 [lints]
 workspace = true
@@ -22,3 +23,7 @@ path = "examples/counter.rs"
 [[example]]
 name = "rv32i_hart"
 path = "examples/rv32i_hart.rs"
+
+[[example]]
+name = "reverb"
+path = "examples/reverb.rs"

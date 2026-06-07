@@ -24,8 +24,8 @@
 //!
 //! ## Examples
 //!
-//! The `systemrs-examples` crate ships two runnable models built on this facade:
-//! an incrementing counter (clock + `SC_METHOD` + signal) and a basic RV32I CPU
+//! The `systemrs-examples` crate ships reference models built on this facade:
+//! an enable-gated counter (clock + `SC_METHOD` + signals) and a basic RV32I CPU
 //! hart (`SC_THREAD` + `b_transport` over a socket to a memory target).
 
 pub use systemrs_channels as channels;

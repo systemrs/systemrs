@@ -43,6 +43,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "qfixed"
+version = "0.1.0"
+source = "git+https://github.com/systemrs/qfixed.git#fe292eaf4a82e5b81848f97455a208162d7f4007"
+dependencies = [
+ "typenum",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -125,6 +133,7 @@ dependencies = [
 name = "systemrs-examples"
 version = "0.1.0"
 dependencies = [
+ "qfixed",
  "systemrs",
 ]
 
@@ -229,6 +238,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "typenum"
+version = "1.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "unicode-ident"

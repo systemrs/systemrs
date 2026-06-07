@@ -7,15 +7,23 @@ use systemrs_examples::{counter, rv32i};
 /// The word address the RV32I program stores its result at.
 const RESULT_ADDR: u32 = 0x100;
 
-/// Verifies the counter increments once per clock period over many periods.
+/// Verifies the enable-gated counter increments only on posedges where the external
+/// `enable` line is high.
 #[test]
-fn counter_increments_each_period() {
+fn counter_counts_only_enabled_edges() {
     let sim = Sim::new();
     let counter = counter::build(&sim, SimTime::from_ns(10));
 
-    // Posedges at 0,10,…,90 ns → 10 increments by 95 ns.
+    // Raise enable at 5 ns and hold it high: the 0 ns edge is off, the 10…90 ns edges
+    // are on → 9 increments by 95 ns.
+    let enable = counter.enable;
+    sim.add_thread("enable-driver", &[], true, move |cx| {
+        cx.wait(SimTime::from_ns(5));
+        enable.write(cx, true);
+    });
+
     sim.run_until(SimTime::from_ns(95));
-    assert_eq!(counter.count.read(&sim.ctx()), 10);
+    assert_eq!(counter.count.read(&sim.ctx()), 9);
 }
 
 /// Verifies the RV32I hart computes `sum(1..=10) = 55`, communicating the result
