@@ -15,9 +15,13 @@
 //! - [`dma`] — a register-programmed DMA engine: a CPU programs it over LT
 //!   (`b_transport`), and it copies a block over the AT four-phase handshake
 //!   (`nb_transport_fw`/`bw` + PEQ) to an `AtMemory`, raising a completion interrupt.
+//! - [`twin`] — a real-time sensor-monitoring digital twin: externally-injected
+//!   readings (park/resume), a `RealTimePacer`, seeded-noise processing, an
+//!   `AnalysisPort` meter, and a journal that replays byte-identically.
 
 pub mod counter;
 pub mod dma;
 pub mod platform;
 pub mod reverb;
 pub mod rv32i;
+pub mod twin;

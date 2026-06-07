@@ -31,3 +31,7 @@ path = "examples/reverb.rs"
 [[example]]
 name = "dma"
 path = "examples/dma.rs"
+
+[[example]]
+name = "twin"
+path = "examples/twin.rs"
