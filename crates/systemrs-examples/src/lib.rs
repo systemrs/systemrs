@@ -12,8 +12,12 @@
 //! - [`reverb`] — a fixed-point electric-guitar reverb pedal: blocks of `qfixed`
 //!   `Q2.14` samples streamed over `b_transport`, a comb+allpass reverb with a
 //!   complex-`CQ` NCO tremolo, and per-block level telemetry on an `AnalysisPort`.
+//! - [`dma`] — a register-programmed DMA engine: a CPU programs it over LT
+//!   (`b_transport`), and it copies a block over the AT four-phase handshake
+//!   (`nb_transport_fw`/`bw` + PEQ) to an `AtMemory`, raising a completion interrupt.
 
 pub mod counter;
+pub mod dma;
 pub mod platform;
 pub mod reverb;
 pub mod rv32i;
