@@ -14,7 +14,7 @@ use crate::channel::UpdatableChannel;
 use crate::ctx::Ctx;
 use crate::event::{Event, Pending};
 use crate::ids::{ChanId, EventId, ProcId};
-use crate::phase::{Phase, Stage};
+use crate::phase::{Phase, Stage, Starvation};
 use crate::process::{ProcKind, Process, WaitReq, WaitState};
 use crate::timed::{TimedEntry, TimedTarget};
 
@@ -37,6 +37,18 @@ pub(crate) type EndOfSimHook = Rc<dyn Fn(&Ctx)>;
 /// for observability (`doc/systemrs-design.md` §6e). Must be read-only with respect
 /// to the schedule (no `notify`/`request_update`/`wait`).
 pub(crate) type StageHook = Rc<dyn Fn(&Ctx, Stage)>;
+
+/// The starvation gate: consulted at an otherwise-idle point under the
+/// [`Starvation::SuspendOnStarvation`] policy (`doc/systemrs-design.md` §6f). A
+/// digital-twin layer installs it; it may inject activity (via `Ctx` notify) and
+/// return [`Resume`](crate::phase::GateOutcome::Resume), or park and return
+/// `Resume`/`Stop`. With no gate installed the kernel exits on starvation as before.
+pub(crate) type StarvationGate = Rc<dyn Fn(&Ctx) -> crate::phase::GateOutcome>;
+
+/// The time-advance hook: fired when timed simulation advances `now`
+/// (`from` → `to`), *before* the advance commits, for real-time pacing (§6f). Never
+/// fired for delta cycles. Read-only with respect to the schedule.
+pub(crate) type TimeAdvanceHook = Rc<dyn Fn(&Ctx, SimTime, SimTime)>;
 
 /// All mutable kernel state, owned behind a single `Rc<RefCell<Inner>>`.
 ///
@@ -131,6 +143,19 @@ pub(crate) struct Inner {
     /// default — the firing sites short-circuit so a hierarchy-free run is unaffected.
     pub(crate) stage_hooks: Vec<StageHook>,
 
+    /// The starvation policy (digital-twin layer, §6f). Defaults to
+    /// [`Starvation::ExitOnStarvation`]; only [`Starvation::SuspendOnStarvation`] +
+    /// an installed [`Inner::starvation_gate`] changes the run-loop behaviour.
+    pub(crate) starvation: Starvation,
+
+    /// The starvation gate, installed by a digital-twin layer. `None` on a bare
+    /// kernel, in which case starvation exits as before.
+    pub(crate) starvation_gate: Option<StarvationGate>,
+
+    /// The time-advance hook for real-time pacing. `None` by default — the firing
+    /// site short-circuits so an unpaced run is unaffected.
+    pub(crate) time_advance_hook: Option<TimeAdvanceHook>,
+
     /// Whether the elaboration hook has already run (drives it exactly once even
     /// across multiple `run_until` calls).
     pub(crate) elaborated: bool,
@@ -169,6 +194,9 @@ impl Inner {
             elaboration_hook: None,
             end_of_sim_hooks: Vec::new(),
             stage_hooks: Vec::new(),
+            starvation: Starvation::ExitOnStarvation,
+            starvation_gate: None,
+            time_advance_hook: None,
             elaborated: false,
             ended: false,
         }
@@ -177,6 +205,20 @@ impl Inner {
     /// Allocates a fresh, unsubscribed event and returns its id.
     pub(crate) fn alloc_event(&mut self) -> EventId {
         self.events.insert(Event::new())
+    }
+
+    /// Returns whether a delta notification or zero-time wake is pending.
+    ///
+    /// Used by the suspend-on-starvation resume path: a gate that injects via a delta
+    /// `notify` arms `delta_events`/`delta_wakes`, which are drained only by
+    /// `commit_and_notify` — so the run loop must run one commit when this is true
+    /// before re-crunching, or the injected wake is lost to the empty-delta guard.
+    ///
+    /// # Returns
+    ///
+    /// `true` if a delta event or a zero-time wake is queued.
+    pub(crate) fn has_pending_delta(&self) -> bool {
+        !self.delta_events.is_empty() || !self.delta_wakes.is_empty()
     }
 
     /// Returns the next monotonic sequence number (timed-heap tie-break).

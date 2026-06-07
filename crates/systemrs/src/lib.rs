@@ -36,6 +36,7 @@ pub use systemrs_tlm_utils as tlm_utils;
 pub use systemrs_tlm1 as tlm1;
 pub use systemrs_tlm2 as tlm2;
 pub use systemrs_trace as trace;
+pub use systemrs_twin as twin;
 
 // The `#[module]` attribute macro (the facade is the only crate that may re-export
 // it without forming a dependency cycle; the macro emits `::systemrs::`-paths).
@@ -62,6 +63,11 @@ pub use systemrs_tlm2::{
 };
 pub use systemrs_trace::{
     MemorySink, TraceCommand, TraceEvent, TraceResponse, TraceSink, Tracer, TxnRecord, WriterSink,
+};
+pub use systemrs_twin::{
+    ChannelInput, ChannelInputSender, ExternalInput, InjectionKind, InjectionRecord, Journal,
+    JournalRecorder, JournalReplayer, PacerStats, RealTimePacer, Rng, StopSignal, TwinBuilder,
+    attach_external_input, channel_input, journal_input,
 };
 
 pub mod prelude;

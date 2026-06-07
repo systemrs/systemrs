@@ -94,7 +94,7 @@ impl Tracer {
     /// * `ctx` - A kernel handle.
     /// * `payload` - The serviced transaction payload.
     pub fn record_transaction(&self, ctx: &Ctx, payload: &GenericPayload) {
-        let rec = TxnRecord::from_payload(ctx.now(), ctx.delta_count(), payload);
+        let rec = TxnRecord::from_payload(ctx.now(), payload);
         self.sink.emit(TraceEvent::Txn(rec));
     }
 }

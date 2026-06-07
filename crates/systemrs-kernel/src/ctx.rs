@@ -85,6 +85,14 @@ impl Ctx {
         self.inner.borrow().delta_count
     }
 
+    /// Returns the simulation's frozen time resolution.
+    ///
+    /// Used by real-time pacing to convert sim time to wall-clock duration
+    /// (`doc/systemrs-design.md` §6f).
+    pub fn resolution(&self) -> systemrs_time::Resolution {
+        self.inner.borrow().resolution
+    }
+
     /// Returns `true` if `ev` fired in the current change-stamp window
     /// (`triggered()` = `trigger_stamp == change_stamp`).
     pub fn triggered(&self, ev: EventId) -> bool {

@@ -53,7 +53,7 @@ fn scoreboard_and_stream_fan_out() {
                 GenericPayload::read(addr, 1)
             };
             // Synchronous broadcast to every subscriber in registration order.
-            p.write(&TxnRecord::from_payload(cx.now(), cx.delta_count(), &gp));
+            p.write(&TxnRecord::from_payload(cx.now(), &gp));
         }
     });
     sim.add_thread("consumer", &[], true, move |cx| {

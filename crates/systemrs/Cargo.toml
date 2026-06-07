@@ -18,6 +18,7 @@ systemrs-tlm1.workspace = true
 systemrs-tlm2.workspace = true
 systemrs-tlm-utils.workspace = true
 systemrs-trace.workspace = true
+systemrs-twin.workspace = true
 # The facade is the ONLY crate that depends on the proc-macro crate, so it can
 # re-export the macros without any other crate forming a dependency cycle.
 systemrs-macros.workspace = true

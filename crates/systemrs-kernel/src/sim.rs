@@ -18,7 +18,7 @@ use crate::channel::UpdatableChannel;
 use crate::ctx::{self, Ctx};
 use crate::ids::{ChanId, EventId, ProcId};
 use crate::inner::Inner;
-use crate::phase::{Phase, Stage};
+use crate::phase::{GateOutcome, Phase, Stage, Starvation};
 use crate::process::{ProcKind, Process, ProcessBody, WaitState, WakeReason};
 
 /// Wraps an `FnOnce(&Ctx) + Send` thread body in a [`Fiber`].
@@ -165,6 +165,46 @@ impl Sim {
         self.inner.borrow_mut().end_of_sim_hooks.push(Rc::new(hook));
     }
 
+    /// Sets the starvation policy (`doc/systemrs-design.md` §6f). The default is
+    /// [`Starvation::ExitOnStarvation`]; a digital-twin layer sets
+    /// [`Starvation::SuspendOnStarvation`] together with [`Sim::set_starvation_gate`]
+    /// to park rather than exit when idle.
+    ///
+    /// # Arguments
+    ///
+    /// * `policy` - The starvation policy.
+    pub fn set_starvation_policy(&self, policy: Starvation) {
+        self.inner.borrow_mut().starvation = policy;
+    }
+
+    /// Installs the starvation gate, consulted at an otherwise-idle point under the
+    /// [`Starvation::SuspendOnStarvation`] policy. The gate may inject activity and
+    /// return [`GateOutcome::Resume`], or [`GateOutcome::Exit`]/[`GateOutcome::Stop`].
+    ///
+    /// # Arguments
+    ///
+    /// * `gate` - The gate callback (receives a [`Ctx`], returns a [`GateOutcome`]).
+    pub fn set_starvation_gate<F>(&self, gate: F)
+    where
+        F: Fn(&Ctx) -> GateOutcome + 'static,
+    {
+        self.inner.borrow_mut().starvation_gate = Some(Rc::new(gate));
+    }
+
+    /// Installs the time-advance hook for real-time pacing (`doc/systemrs-design.md`
+    /// §6f). Fired when timed simulation advances `now` (`from` → `to`), before the
+    /// advance commits; never fired for delta cycles. A no-op slot when unset.
+    ///
+    /// # Arguments
+    ///
+    /// * `hook` - The pacing callback (receives a [`Ctx`], the old time, the new time).
+    pub fn set_time_advance_hook<F>(&self, hook: F)
+    where
+        F: Fn(&Ctx, SimTime, SimTime) + 'static,
+    {
+        self.inner.borrow_mut().time_advance_hook = Some(Rc::new(hook));
+    }
+
     /// Registers an observability stage callback, fired at each `PreTimestep` and
     /// `PostUpdate` boundary (`doc/systemrs-design.md` §6e).
     ///
@@ -299,7 +339,38 @@ impl Sim {
 
             let next = self.inner.borrow_mut().next_timed_when();
             match next {
-                None => break,
+                None => {
+                    // Starvation. With no twin gate installed (the default), exit
+                    // exactly as before — byte-identical M0-M5 behaviour. Otherwise
+                    // consult the gate: a digital twin parks for external input
+                    // rather than exiting on idle (§6f).
+                    let gated = {
+                        let g = self.inner.borrow();
+                        g.starvation == Starvation::SuspendOnStarvation
+                            && g.starvation_gate.is_some()
+                    };
+                    // Park only for an unbounded run (`run_until(INF)`, the twin's
+                    // long-lived service mode). A finite `end` is a bounded run: exit
+                    // on starvation as usual, rather than block forever for input that
+                    // cannot advance sim time to `end`.
+                    if !gated || end != SimTime::INF {
+                        break;
+                    }
+                    match self.fire_gate() {
+                        Some(GateOutcome::Resume) => {
+                            // The gate may have injected via a delta `notify`, which
+                            // arms `delta_events`/`delta_wakes` that only
+                            // `commit_and_notify` drains — and a bare re-crunch would
+                            // hit the empty-delta guard and drop it. Run one commit so
+                            // the injected event fires and its process wakes; the loop
+                            // then re-crunches.
+                            if self.inner.borrow().has_pending_delta() {
+                                self.commit_and_notify();
+                            }
+                        }
+                        _ => break, // Exit / Stop / no gate
+                    }
+                }
                 Some(when) if when > end => {
                     let mut g = self.inner.borrow_mut();
                     if g.now < end {
@@ -415,6 +486,30 @@ impl Sim {
         for hook in hooks {
             hook(&ctx, stage);
         }
+    }
+
+    /// Consults the installed starvation gate (digital-twin layer, §6f) with no
+    /// `Inner` borrow held during the call (so the gate may block on external input).
+    /// Only invoked when a gate is installed and the policy is `SuspendOnStarvation`.
+    fn fire_gate(&self) -> Option<GateOutcome> {
+        let gate = self.inner.borrow().starvation_gate.clone()?;
+        let ctx = self.ctx();
+        Some(gate(&ctx))
+    }
+
+    /// Fires the time-advance hook (real-time pacing, §6f) for the advance to `to`,
+    /// with no `Inner` borrow held (the pacer sleeps inside). A true no-op — no
+    /// borrow read of `now`, no `Ctx` — when no hook is installed.
+    fn fire_time_advance(&self, to: SimTime) {
+        let (hook, from) = {
+            let g = self.inner.borrow();
+            match &g.time_advance_hook {
+                None => return,
+                Some(hook) => (hook.clone(), g.now),
+            }
+        };
+        let ctx = self.ctx();
+        hook(&ctx, from, to);
     }
 
     /// Marks the simulation started and queues initial processes.
@@ -627,6 +722,10 @@ impl Sim {
         // Observability: fire PreTimestep before time advances (still at the old
         // `now`), with no `Inner` borrow held. A no-op with no stage hooks.
         self.fire_stage(Stage::PreTimestep);
+        // Real-time pacing: pace wall clock to the upcoming sim time before advancing
+        // (digital-twin layer, §6f). Only time advance is paced; deltas never reach
+        // here. A no-op with no time-advance hook.
+        self.fire_time_advance(when);
         let mut g = self.inner.borrow_mut();
         debug_assert!(g.now < when, "time must advance monotonically");
         g.now = when;

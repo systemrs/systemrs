@@ -31,3 +31,7 @@ pub use systemrs_tlm2::{
     TargetSocket, TlmSync, Txn, TxnPool,
 };
 pub use systemrs_trace::{MemorySink, TraceEvent, TraceSink, Tracer, WriterSink};
+pub use systemrs_twin::{
+    ChannelInputSender, JournalReplayer, RealTimePacer, Rng, StopSignal, TwinBuilder,
+    attach_external_input, channel_input, journal_input,
+};

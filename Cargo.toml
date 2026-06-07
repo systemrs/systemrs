@@ -19,6 +19,7 @@ members = [
     "crates/systemrs-tlm2",
     "crates/systemrs-tlm-utils",
     "crates/systemrs-trace",
+    "crates/systemrs-twin",
     "crates/systemrs",
     "crates/systemrs-examples",
 ]
@@ -43,6 +44,7 @@ systemrs-tlm1 = { path = "crates/systemrs-tlm1", version = "0.1.0" }
 systemrs-tlm2 = { path = "crates/systemrs-tlm2", version = "0.1.0" }
 systemrs-tlm-utils = { path = "crates/systemrs-tlm-utils", version = "0.1.0" }
 systemrs-trace = { path = "crates/systemrs-trace", version = "0.1.0" }
+systemrs-twin = { path = "crates/systemrs-twin", version = "0.1.0" }
 systemrs-macros = { path = "crates/systemrs-macros", version = "0.1.0" }
 systemrs = { path = "crates/systemrs", version = "0.1.0" }
 

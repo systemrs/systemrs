@@ -1,0 +1,19 @@
+[package]
+name = "systemrs-twin"
+description = "Digital-twin layer for SystemRS: real-time pacing, external-input gating, seeded RNG, and deterministic replay."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# L6 twin layer: depends on the kernel + time ONLY. Slip telemetry is exposed as a
+# plain `Copy` PacerStats (not a TraceEvent), so this crate never needs systemrs-trace
+# — which depends on systemrs-kernel and would otherwise form a cycle.
+systemrs-kernel.workspace = true
+systemrs-time.workspace = true
+
+[lints]
+workspace = true

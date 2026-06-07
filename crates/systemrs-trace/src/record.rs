@@ -54,13 +54,14 @@ impl From<ResponseStatus> for TraceResponse {
 
 /// A transaction-centric record (`doc/systemrs-design.md` §6e). LT capture leaves
 /// `phases` empty; AT phase accumulation is a deferred follow-up.
+///
+/// Transactions are timed (not delta-tagged): the record carries the simulation
+/// time, never the internal `delta_count` — so a replayed run, whose injections
+/// arrive via a different scheduler path, still produces a byte-identical trace.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TxnRecord {
     /// The time the transaction was recorded.
     pub time: SimTime,
-
-    /// The delta count at recording.
-    pub delta: u64,
 
     /// The command.
     pub command: TraceCommand,
@@ -76,21 +77,19 @@ pub struct TxnRecord {
 }
 
 impl TxnRecord {
-    /// Builds a record from a payload at the current time/delta.
+    /// Builds a record from a payload at the current time.
     ///
     /// # Arguments
     ///
     /// * `time` - The current simulation time.
-    /// * `delta` - The current delta count.
     /// * `payload` - The transaction payload to snapshot.
     ///
     /// # Returns
     ///
     /// The [`TxnRecord`].
-    pub fn from_payload(time: SimTime, delta: u64, payload: &GenericPayload) -> Self {
+    pub fn from_payload(time: SimTime, payload: &GenericPayload) -> Self {
         TxnRecord {
             time,
-            delta,
             command: payload.command().into(),
             address: payload.address(),
             length: u32::try_from(payload.len()).unwrap_or(u32::MAX),
@@ -129,9 +128,8 @@ impl core::fmt::Display for TraceEvent {
             } => write!(f, "@{}d{} {name}={value}", time.units(), delta),
             TraceEvent::Txn(r) => write!(
                 f,
-                "@{}d{} {:?} addr={:#x} len={} {:?}",
+                "@{} {:?} addr={:#x} len={} {:?}",
                 r.time.units(),
-                r.delta,
                 r.command,
                 r.address,
                 r.length,

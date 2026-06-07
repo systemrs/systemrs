@@ -91,6 +91,7 @@ dependencies = [
  "systemrs-tlm1",
  "systemrs-tlm2",
  "systemrs-trace",
+ "systemrs-twin",
 ]
 
 [[package]]
@@ -199,6 +200,14 @@ dependencies = [
  "systemrs-kernel",
  "systemrs-time",
  "systemrs-tlm2",
+]
+
+[[package]]
+name = "systemrs-twin"
+version = "0.1.0"
+dependencies = [
+ "systemrs-kernel",
+ "systemrs-time",
 ]
 
 [[package]]
