@@ -1,0 +1,37 @@
+# CI mirrors `just ci`: every check runs the same scripts/ entrypoints used
+# locally, so a green `just ci` on a developer machine means a green CI.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  quality:
+    name: Quality checks (stable)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The pinned stable toolchain + components come from rust-toolchain.toml
+      # on the first cargo invocation. Install just and the cargo plugins as
+      # prebuilt binaries.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just,cargo-deny,cargo-audit
+      - name: Run all CI quality checks
+        run: just ci
+
+  msrv:
+    name: Build & test (MSRV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # scripts/msrv.sh reads the floor from Cargo.toml's rust-version and
+      # installs that toolchain, so there is no version pinned here to drift.
+      - name: Build & test on the MSRV
+        run: scripts/msrv.sh
