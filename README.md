@@ -80,27 +80,40 @@ so the ISA is unit-tested directly (see `crates/systemrs-examples/src/rv32i.rs`)
 
 ## Building and testing
 
-This is a Cargo **workspace** (resolver 3, edition 2024, MSRV 1.90). From the repo
-root:
+This is a Cargo **workspace** (resolver 3, edition 2024, MSRV 1.90). Everyday tasks
+are wrapped as [`just`](https://just.systems) recipes — each a thin wrapper around a
+script in [`scripts/`](scripts/) — so the same commands run locally and in CI. Run
+`just` with no arguments to list them all. From the repo root:
+
+| Command | What it does |
+|---|---|
+| `just build` | Debug build of the whole workspace and all targets. |
+| `just test` | Run the whole test suite (`just test <name>` filters). |
+| `just examples` | Run every example (`just examples counter dma` runs a subset). |
+| `just clippy` | Lint all targets; warnings are errors. |
+| `just fmt` &middot; `just fmt-check` | Format in place &middot; check formatting only. |
+| `just doc` &middot; `just open-docs` | Build the API docs &middot; build and open them. |
+| `just deny` &middot; `just audit` | License/advisory gate &middot; security audit. |
+| `just msrv` | Build and test on the MSRV (Rust 1.90, installed if missing). |
+| `just ci` (alias `just check`) | **The full quality gate — run this before committing.** |
+
+If you don't have `just` (`cargo install just`), the recipes are thin wrappers, so
+you can run the underlying cargo commands directly — e.g. `cargo test --workspace`
+or `cargo run --example counter`.
+
+### Before committing
+
+Run the full quality gate and make sure it passes:
 
 ```sh
-cargo build                                   # debug build
-cargo test --workspace                        # all tests
-cargo run --example counter                   # run example 1
-cargo run --example rv32i_hart                # run example 2
+just ci
 ```
 
-The full quality gate (matching the project's Rust skill):
-
-```sh
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test --workspace
-cargo build --release
-cargo doc --no-deps --document-private-items
-cargo deny check
-cargo audit
-```
+`just ci` runs, in order: `fmt --check` → `clippy -D warnings` → `test` →
+`build --release` → examples → `doc` → `deny check` → `audit` — the project's
+build-verification sequence. The GitHub Actions workflow
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) mirrors it, adding the MSRV
+leg (`just msrv`), so **a green `just ci` locally means a green CI.**
 
 The optional SystemC co-simulation path (`cosim` feature) is not yet wired up; it
 will require `external/systemc` and a C++ toolchain (see the design doc §11).
