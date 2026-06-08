@@ -22,7 +22,7 @@ jobs:
       # prebuilt binaries.
       - uses: taiki-e/install-action@v2
         with:
-          tool: just,cargo-deny,cargo-audit
+          tool: just,cargo-deny,cargo-audit,mdbook
       - name: Run all CI quality checks
         run: just ci
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run every CI quality check in the project's build-verification order (see
 # CLAUDE.md): fmt --check -> clippy -> test -> build (release) -> examples ->
-# doc -> deny -> audit.
+# doc -> book -> deny -> audit.
 #
 # This is the single definition of "what CI does", shared by `just ci` and the
 # GitHub Actions workflow. Each step delegates to its sibling script so there is
@@ -22,6 +22,7 @@ run "test"            "$here/test.sh"
 run "build (release)" "$here/build-release.sh"
 run "examples"        "$here/examples.sh"
 run "doc"             "$here/doc.sh"
+run "book"            "$here/book.sh"
 run "deny"            "$here/deny.sh"
 run "audit"           "$here/audit.sh"
 

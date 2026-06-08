@@ -54,6 +54,10 @@ doc *args:
 open-docs *args:
     scripts/open-docs.sh {{args}}
 
+# Build the user guide (mdBook): render + link-check + {{#include}} resolution.
+book *args:
+    scripts/book.sh {{args}}
+
 # Check dependency licenses, advisories, and bans (cargo-deny).
 deny *args:
     scripts/deny.sh {{args}}

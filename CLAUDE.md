@@ -47,6 +47,7 @@ This is a Cargo **workspace** (resolver 3, edition 2024). Run from the repo root
 | Test a single crate | `cargo test -p systemrs-kernel` |
 | Test a single test fn | `cargo test -p systemrs-examples delta_order` |
 | Docs (incl. private items) | `cargo doc --no-deps --document-private-items` |
+| User guide (mdBook) | `just book` (render + link/include check; part of `just ci`) |
 | License/advisory gate | `cargo deny check` |
 | Security audit | `cargo audit` |
 | Reproduce MSRV leg | `cargo +1.90 build` / `cargo +1.90 test` |
@@ -71,7 +72,7 @@ Because of this, **CI tasks must invoke the commands defined in `scripts/`, neve
 - **`just ci` (alias `just check`) is the gate every change must pass — a change is not done until
   it is green.** Run the full pass before finishing or committing. While iterating, the faster
   individual recipes — `just fmt-check`, `just clippy`, `just test`, `just build-release`,
-  `just examples`, `just doc`, `just deny`, `just audit`, `just msrv`, … — each wrap exactly one
+  `just examples`, `just doc`, `just book`, `just deny`, `just audit`, `just msrv`, … — each wrap exactly one
   script; run `just` to list them all.
 - When you change *what* a check does, edit the script under `scripts/`; for a new check, add its
   script, a thin recipe that calls it, and a line in `scripts/ci.sh`. Do **not** add a command only

@@ -233,11 +233,13 @@ impl Reverb {
     /// # Returns
     ///
     /// The processed output sample.
+    // ANCHOR: process
     pub fn process_sample(&mut self, x: Sample) -> Sample {
         let echoed = self.comb.process(x);
         let diffused = self.allpass.process(echoed);
         diffused.saturating_mul(self.nco.next_gain())
     }
+    // ANCHOR_END: process
 }
 
 /// A TLM reverb pedal: a target socket that processes one block of `Q2.14` samples

@@ -66,7 +66,8 @@ RUN rustup update
 #   cargo-audit — RustSec vulnerability scanner
 #   cargo-nextest — fast test runner for the conformance/integration suites
 #   just — command runner for project task recipes
-RUN cargo install --locked cargo-deny cargo-audit cargo-nextest just
+#   mdbook — renders the user guide (`just book`, part of `just ci`)
+RUN cargo install --locked cargo-deny cargo-audit cargo-nextest just mdbook
 
 # Create non-root user for development (handle existing UID/GID 1000).
 ARG USERNAME=vscode

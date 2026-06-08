@@ -196,6 +196,7 @@ pub fn build_platform(kernel: &Kernel<Building>) -> Platform {
     let mem_slot: Rc<RefCell<Option<Memory>>> = Rc::new(RefCell::new(None));
 
     let top = kernel
+        // ANCHOR: elaborate
         .module("top", |t| {
             let cpu = t
                 .module_with("cpu", {
@@ -228,6 +229,7 @@ pub fn build_platform(kernel: &Kernel<Building>) -> Platform {
             .expect("probe");
         })
         .expect("top");
+    // ANCHOR_END: elaborate
 
     let mem = mem_slot.borrow().clone().expect("mem built");
     Platform {

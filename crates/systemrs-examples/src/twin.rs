@@ -85,6 +85,7 @@ pub fn inject(cx: &Ctx, sample: EventId, raw: u64) {
 /// # Returns
 ///
 /// The shared processed-reading [`AnalysisPort`].
+// ANCHOR: sensor
 pub fn build_sensor(
     sim: &Sim,
     params: &SensorParams,
@@ -118,6 +119,7 @@ pub fn build_sensor(
     });
     port
 }
+// ANCHOR_END: sensor
 
 /// A recorder subscriber that collects every broadcast [`Reading`].
 struct Collector(Rc<RefCell<Vec<Reading>>>);

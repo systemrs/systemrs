@@ -1,0 +1,21 @@
+[book]
+title = "The SystemRS Guide"
+authors = ["Nicholas Londey"]
+description = "An introductory, example-driven guide to SystemRS: a Rust, TLM-only equivalent of SystemC for transaction-level digital twins."
+src = "src"
+language = "en"
+
+[build]
+# Render into the gitignored /target so the book output is never committed. (A future
+# second book — the migration guide — would render to ../../target/migration.)
+build-dir = "../../target/guide"
+# Fail (rather than auto-create) if SUMMARY.md lists a chapter file that is missing.
+create-missing = false
+
+[rust]
+edition = "2024"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/londey/systemrs"

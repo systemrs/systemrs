@@ -42,6 +42,7 @@ pub struct GatedCounter {
 /// # Returns
 ///
 /// [`GatedCounter`] handles for driving `enable` and inspecting the count.
+// ANCHOR: build
 pub fn build(sim: &Sim, period: SimTime) -> GatedCounter {
     let clock = Clock::new(sim, "clk", period);
     let enable = Signal::<bool>::new(sim, "enable", false);
@@ -65,6 +66,7 @@ pub fn build(sim: &Sim, period: SimTime) -> GatedCounter {
         count,
     }
 }
+// ANCHOR_END: build
 
 #[cfg(test)]
 mod tests {

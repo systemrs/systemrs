@@ -96,6 +96,7 @@ impl Dma {
 
         // Backward AT path: on BEGIN_RESP, complete the handshake (END_RESP) and wake
         // the engine. Strictly sequential, so a single `done` event suffices.
+        // ANCHOR: nb-bw
         mem.register_nb_transport_bw(sim, move |cx, txn, phase, _t| {
             if phase == Phase::BeginResp {
                 let mut t = SimTime::ZERO;
@@ -104,8 +105,10 @@ impl Dma {
             }
             TlmSync::Accepted
         });
+        // ANCHOR_END: nb-bw
 
         // The copy engine: an AT initiator that reads each word then writes it back.
+        // ANCHOR: engine
         sim.add_thread("dma.engine", &[], true, move |cx| {
             let pool = TxnPool::new();
             loop {
@@ -130,6 +133,7 @@ impl Dma {
                 cx.notify(irq); // completion interrupt
             }
         });
+        // ANCHOR_END: engine
 
         Dma { irq }
     }

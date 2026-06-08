@@ -11,8 +11,11 @@ graph, sum types instead of signed-integer conventions, and `TypeId` maps instea
 of RTTI.
 
 The authoritative specification is [doc/systemrs-design.md](doc/systemrs-design.md).
-It is **not** an RTL simulator: the `sc_dt` numeric library, resolved multi-driver
-signals, and clocked threads (`SC_CTHREAD`) are out of scope.
+For a tutorial, example-driven introduction, see the **user guide** in
+[`doc/guide/`](doc/guide/) (`just book`, then `mdbook serve doc/guide` to read it
+locally). It is **not** an RTL
+simulator: the `sc_dt` numeric library, resolved multi-driver signals, and clocked
+threads (`SC_CTHREAD`) are out of scope.
 
 ## What is implemented
 
@@ -93,6 +96,7 @@ script in [`scripts/`](scripts/) — so the same commands run locally and in CI.
 | `just clippy` | Lint all targets; warnings are errors. |
 | `just fmt` &middot; `just fmt-check` | Format in place &middot; check formatting only. |
 | `just doc` &middot; `just open-docs` | Build the API docs &middot; build and open them. |
+| `just book` | Build the user guide (mdBook); render + link/include check. |
 | `just deny` &middot; `just audit` | License/advisory gate &middot; security audit. |
 | `just msrv` | Build and test on the MSRV (Rust 1.90, installed if missing). |
 | `just ci` (alias `just check`) | **The full quality gate — run this before committing.** |
@@ -110,7 +114,7 @@ just ci
 ```
 
 `just ci` runs, in order: `fmt --check` → `clippy -D warnings` → `test` →
-`build --release` → examples → `doc` → `deny check` → `audit` — the project's
+`build --release` → examples → `doc` → `book` → `deny check` → `audit` — the project's
 build-verification sequence. The GitHub Actions workflow
 ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) mirrors it, adding the MSRV
 leg (`just msrv`), so **a green `just ci` locally means a green CI.**

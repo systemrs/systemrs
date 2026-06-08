@@ -429,13 +429,14 @@ impl Bus for SocketBus<'_> {
 /// * `isock` - The hart's initiator socket (must be bound to a memory target).
 /// * `entry` - The reset program-counter value.
 /// * `cycle` - The modelled time per executed instruction.
+// ANCHOR: hart
 pub fn build_hart(sim: &Sim, isock: InitiatorSocket, entry: u32, cycle: SimTime) {
     sim.add_thread("hart", &[], true, move |cx| {
         let mut regs = [0u32; NUM_REGS];
         let mut pc = entry;
         loop {
             let mut bus = SocketBus { cx, isock };
-            let inst = bus.read(pc, 4);
+            let inst = bus.read(pc, 4); // a b_transport, several calls deep
             let result = step(&mut bus, &mut regs, &mut pc, inst);
             if result == StepResult::Halt {
                 break;
@@ -446,6 +447,7 @@ pub fn build_hart(sim: &Sim, isock: InitiatorSocket, entry: u32, cycle: SimTime)
         }
     });
 }
+// ANCHOR_END: hart
 
 #[cfg(test)]
 mod tests {
