@@ -29,7 +29,9 @@ build-verification sequence. In particular:
 - No `.unwrap()`/`.expect()` in non-test code; propagate with `Result` + `?`. Errors surface as
   typed `Result`, not panics — `sc_report(ERROR)` maps to `Result`, `FATAL` aborts (§7).
 - All public items get rustdoc; functions document `# Arguments`/`# Returns`/`# Errors`/`# Panics`.
-- After changing Rust code, run the skill's build-verification sequence (see Commands below).
+- **No change is complete until `just ci` passes** — it runs the skill's full build-verification
+  sequence (see Commands below). While iterating, lean on the faster individual recipes
+  (`just clippy`, `just test`); run the full `just ci` before considering a change done or committing.
 
 ## Commands
 
@@ -66,9 +68,11 @@ and the `msrv` job runs `scripts/msrv.sh`. A green `just ci` locally therefore m
 
 Because of this, **CI tasks must invoke the commands defined in `scripts/`, never duplicate them**:
 
-- Run the full local pass with `just ci` (alias `just check`). Individual recipes — `just fmt-check`,
-  `just clippy`, `just test`, `just build-release`, `just examples`, `just doc`, `just deny`,
-  `just audit`, `just msrv`, … — each wrap exactly one script; run `just` to list them all.
+- **`just ci` (alias `just check`) is the gate every change must pass — a change is not done until
+  it is green.** Run the full pass before finishing or committing. While iterating, the faster
+  individual recipes — `just fmt-check`, `just clippy`, `just test`, `just build-release`,
+  `just examples`, `just doc`, `just deny`, `just audit`, `just msrv`, … — each wrap exactly one
+  script; run `just` to list them all.
 - When you change *what* a check does, edit the script under `scripts/`; for a new check, add its
   script, a thin recipe that calls it, and a line in `scripts/ci.sh`. Do **not** add a command only
   to the GitHub workflow or only to a recipe — keep `scripts/` authoritative so local and CI stay
