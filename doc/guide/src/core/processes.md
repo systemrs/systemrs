@@ -1,9 +1,13 @@
-# Processes: METHOD vs THREAD
+# Processes: methods and threads
 
-Behaviour in SystemRS lives in **processes**. There are two kinds, and choosing between
-them is the most common design decision you will make.
+Behaviour in SystemRS lives in **processes**. There are two kinds — *methods* and
+*threads* — and choosing between them is the most common design decision you will make.
 
-## `SC_METHOD` — run to completion
+> **Coming from SystemC?** A method is what SystemC calls an `SC_METHOD`, and a thread is
+> an `SC_THREAD`. SystemRS drops the macro names; the
+> [naming map](../reference/naming-map.md) has the full translation.
+
+## Methods — run to completion
 
 A method is a plain `FnMut(&Ctx)` that runs from start to finish each time it is
 triggered. It **cannot** `wait`. Use it for combinational logic, clocked register
@@ -28,7 +32,7 @@ sim.method("counter")
 form, `sim.add_method(name, &[events], initialize, body)`, when you do not need the
 builder.
 
-## `SC_THREAD` — a stackful coroutine
+## Threads — stackful coroutines
 
 A thread is a coroutine with its own stack. It **can** `cx.wait(...)` from *any* call
 depth — even many frames deep inside a transport call. Use it for sequencers, CPUs,

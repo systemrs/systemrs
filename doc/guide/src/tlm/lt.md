@@ -33,7 +33,7 @@ assert_eq!(mem.read_u32(0x40), 0xCAFE); // backdoor read, no modelled latency
 Two things to notice:
 
 - **`b_transport` blocks.** The `Memory` target `cx.wait`s for the access latency
-  *inside* the call. That is why the initiator must be an `SC_THREAD`: the wait suspends
+  *inside* the call. That is why the initiator must be a thread: the wait suspends
   the calling coroutine. This is SystemRS's central technical bet paying off — `wait`
   works from arbitrarily deep in the call stack, with no `async` colouring spreading up
   through your transport path. (A method may call `b_transport` only if the target never

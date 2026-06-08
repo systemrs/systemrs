@@ -17,7 +17,7 @@ What each piece is doing:
 - **Two signals and a clock.** `enable` is a `Signal<bool>` (the gate), `count` is a
   `Signal<u32>` (the output), and `clock` provides the timing. All three are `Copy`
   handles the method captures by value.
-- **A clocked method.** The `SC_METHOD` is `sensitive_to` the clock's posedge and
+- **A clocked method.** The method is `sensitive_to` the clock's posedge and
   `dont_initialize`d, so it runs *only* on rising edges.
 - **Sampling the gate.** On each edge it reads `enable`. Because of the evaluate/update
   discipline, this sees the value committed *before* this delta — exactly the registered,

@@ -12,7 +12,7 @@
 # Core Concepts
 
 - [Time and the simulation loop](core/time-and-loop.md)
-- [Processes: METHOD vs THREAD](core/processes.md)
+- [Processes: methods and threads](core/processes.md)
 - [Events, notification, sensitivity](core/events.md)
 - [Channels: signals, clocks, FIFOs](core/channels.md)
 - [Modules, hierarchy, elaboration](core/modules.md)

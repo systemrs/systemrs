@@ -13,9 +13,9 @@ measure latency, contention, and throughput.
 
 SystemRS is **TLM-only**. It reproduces the parts of SystemC and TLM-2.0 needed to
 author transaction-level models, and deliberately omits the RTL machinery — resolved
-multi-driver signals, the `sc_dt` fixed/arbitrary-precision datatype library, clocked
-`SC_CTHREAD`s — that a transaction-level tool does not use. (See §2 and §4 of the design
-report for the full feature-by-feature decisions.)
+multi-driver signals, a fixed/arbitrary-precision datatype library, and clock-edge-driven
+threads — that a transaction-level tool does not use. (See §2 and §4 of the design report
+for the full feature-by-feature decisions.)
 
 ## Why Rust
 
@@ -27,7 +27,7 @@ four-phase handshake — and replaces the *mechanisms* with Rust ones:
 - An **arena + generational-id** object store dissolves the pointer graph: components
   refer to each other by small `Copy` ids, and whole classes of use-after-free and
   destruction-order bugs simply cannot occur.
-- **Stackful coroutines** give `SC_THREAD`-style processes that can `wait()` from any
+- **Stackful coroutines** give thread processes that can `wait()` from any
   call depth — no `async` colouring spreading across your forward path.
 - **Sum types** (`enum`) replace signed-integer status conventions, and **`Result`**
   replaces thrown reports.

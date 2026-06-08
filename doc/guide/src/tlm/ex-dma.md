@@ -17,7 +17,7 @@ on `BEGIN_RESP` it drives `END_RESP` and wakes the copy loop:
 
 ## The copy engine
 
-The engine itself is one `SC_THREAD`. It waits to be started (a register write from the
+The engine itself is one thread. It waits to be started (a register write from the
 CPU notifies it), reads the descriptor from a service, then copies word by word — each
 word an AT read followed by an AT write:
 

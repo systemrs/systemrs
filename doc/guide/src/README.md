@@ -6,7 +6,7 @@ rebuilt on idiomatic Rust.
 
 It faithfully ports SystemC's single-threaded, cooperative, three-phase delta-cycle
 scheduler — the determinism contract on which all transaction-level behaviour rests —
-and layers Rust on top: stackful coroutines for `SC_THREAD`-style processes, an
+and layers Rust on top: stackful coroutines for thread processes, an
 arena-and-generational-id object store instead of a raw-pointer graph, sum types
 instead of signed-integer conventions, and `Result` instead of thrown reports. It
 deliberately drops the RTL-oriented machinery (resolved multi-driver signals, the

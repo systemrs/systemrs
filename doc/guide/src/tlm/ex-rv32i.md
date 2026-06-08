@@ -5,7 +5,7 @@ that fetches, decodes, and executes a program, with *every* memory access routed
 loosely-timed transport to a memory target. It is the LT path under realistic load, and
 a vivid demonstration of why processes are stackful coroutines.
 
-The hart is one `SC_THREAD`: a fetch-decode-execute loop. Included from the example
+The hart is one thread: a fetch-decode-execute loop. Included from the example
 source:
 
 ```rust,ignore

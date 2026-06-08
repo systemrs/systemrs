@@ -5,7 +5,7 @@
 wakes to process it (with seeded measurement noise), broadcasts the result for live
 monitoring, and journals the injections so the run replays byte-identically.
 
-The twin is one `SC_THREAD` that parks on a sample event, then drains and processes each
+The twin is one thread that parks on a sample event, then drains and processes each
 queued reading. Included from the example source:
 
 ```rust,ignore

@@ -30,7 +30,7 @@ Line by line:
 - **`Signal::new` / `Clock::new`** create channels in the kernel's arena and hand you
   back small `Copy` handles (`count`, `clock`). You pass these handles around by value;
   the kernel owns the state behind them.
-- **`sim.method("counter")…`** registers an `SC_METHOD`: a run-to-completion callback,
+- **`sim.method("counter")…`** registers a **method**: a run-to-completion callback,
   here `sensitive_to` the clock's rising edge and told *not* to run at time 0
   (`dont_initialize`). On each posedge it bumps a private `n` and `write`s it to the
   signal.
