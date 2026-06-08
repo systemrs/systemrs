@@ -1,3 +1,6 @@
 [submodule ".claude/skills/claude-skill-rust"]
 	path = .claude/skills/claude-skill-rust
 	url = https://github.com/londey/claude-skill-rust.git
+[submodule ".claude/skills/systemrs-modeling"]
+	path = .claude/skills/systemrs-modeling
+	url = git@github.com:systemrs/systemrs-modeling-skill.git
