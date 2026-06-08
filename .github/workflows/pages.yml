@@ -1,0 +1,52 @@
+# Publish the documentation site to GitHub Pages.
+#
+# Builds the user guide (mdBook) + the public API reference (rustdoc) into one site via
+# scripts/site.sh — the same script `just site` runs locally — then deploys it as a
+# Pages artifact. No build output is ever committed to the repository.
+#
+# One-time setup (a human, once): Settings -> Pages -> Source = "GitHub Actions".
+# (Or via the REST API: `gh api -X PUT repos/londey/systemrs/pages -f build_type=workflow`.)
+name: Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Least-privilege token for the Pages deployment.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deployments at once; let an in-flight deploy finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/configure-pages@v6
+      # The pinned stable toolchain comes from rust-toolchain.toml on the first cargo
+      # invocation (cargo doc), so no explicit toolchain step is needed — same as ci.yml.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook
+      - name: Assemble the documentation site
+        run: scripts/site.sh
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: target/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

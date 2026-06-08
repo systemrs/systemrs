@@ -48,6 +48,7 @@ This is a Cargo **workspace** (resolver 3, edition 2024). Run from the repo root
 | Test a single test fn | `cargo test -p systemrs-examples delta_order` |
 | Docs (incl. private items) | `cargo doc --no-deps --document-private-items` |
 | User guide (mdBook) | `just book` (render + link/include check; part of `just ci`) |
+| Docs site (guide + rustdoc) | `just site` (assembles `target/site/`; deployed by `.github/workflows/pages.yml`) |
 | License/advisory gate | `cargo deny check` |
 | Security audit | `cargo audit` |
 | Reproduce MSRV leg | `cargo +1.90 build` / `cargo +1.90 test` |

@@ -13,7 +13,9 @@ of RTTI.
 The authoritative specification is [doc/systemrs-design.md](doc/systemrs-design.md).
 For a tutorial, example-driven introduction, see the **user guide** in
 [`doc/guide/`](doc/guide/) (`just book`, then `mdbook serve doc/guide` to read it
-locally). It is **not** an RTL
+locally). Once GitHub Pages is enabled, the guide and the API reference publish to
+`https://londey.github.io/systemrs/` (`just site` assembles that bundle locally). It is
+**not** an RTL
 simulator: the `sc_dt` numeric library, resolved multi-driver signals, and clocked
 threads (`SC_CTHREAD`) are out of scope.
 

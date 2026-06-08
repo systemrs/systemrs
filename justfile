@@ -58,6 +58,10 @@ open-docs *args:
 book *args:
     scripts/book.sh {{args}}
 
+# Assemble the public docs site (guide + rustdoc) into target/site/ — what Pages deploys.
+site *args:
+    scripts/site.sh {{args}}
+
 # Check dependency licenses, advisories, and bans (cargo-deny).
 deny *args:
     scripts/deny.sh {{args}}
