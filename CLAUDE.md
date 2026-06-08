@@ -51,9 +51,28 @@ This is a Cargo **workspace** (resolver 3, edition 2024). Run from the repo root
 
 The skill's **build-verification order** after a change is: `fmt` → `fmt --check` →
 `clippy -D warnings` → `test` → `build --release` → `doc` → `deny check` → `audit`. Fix failures
-before moving on.
+before moving on. `just ci` runs exactly this sequence (using `fmt --check`, not the in-place
+`fmt`, and additionally running the examples) — see the task runner below.
 
 `cargo-deny`, `cargo-audit`, and `cargo-nextest` are preinstalled in the devcontainer.
+
+### Task runner (`just`) — the canonical CI entrypoint
+
+A [`justfile`](justfile) at the repo root exposes the tasks above as recipes that each delegate to a
+script in [`scripts/`](scripts/) (e.g. `just clippy` → `scripts/clippy.sh`). **`scripts/` is the
+single source of truth for what every CI/quality command actually runs.** The GitHub Actions workflow
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) mirrors it: the `quality` job runs `just ci`
+and the `msrv` job runs `scripts/msrv.sh`. A green `just ci` locally therefore means a green CI.
+
+Because of this, **CI tasks must invoke the commands defined in `scripts/`, never duplicate them**:
+
+- Run the full local pass with `just ci` (alias `just check`). Individual recipes — `just fmt-check`,
+  `just clippy`, `just test`, `just build-release`, `just examples`, `just doc`, `just deny`,
+  `just audit`, `just msrv`, … — each wrap exactly one script; run `just` to list them all.
+- When you change *what* a check does, edit the script under `scripts/`; for a new check, add its
+  script, a thin recipe that calls it, and a line in `scripts/ci.sh`. Do **not** add a command only
+  to the GitHub workflow or only to a recipe — keep `scripts/` authoritative so local and CI stay
+  identical. The MSRV (`scripts/msrv.sh`) is derived from `rust-version` in `Cargo.toml`, not pinned.
 
 ### SystemC co-simulation (`cosim` feature)
 
