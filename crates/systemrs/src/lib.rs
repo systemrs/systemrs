@@ -19,14 +19,41 @@
 //! - [`systemrs_kernel`] — the scheduler, events, processes, [`Sim`], [`Ctx`].
 //! - [`systemrs_core`] — module/elaboration ergonomics ([`Build`], [`Elaborate`]).
 //! - [`systemrs_channels`] — `Signal`/`Buffer`/`Fifo`/`Clock`.
+//! - [`systemrs_tlm1`] — the analysis sublayer (`AnalysisPort`/`AnalysisFifo`).
 //! - [`systemrs_tlm2`] — the generic payload, transport, sockets, and a memory target.
+//! - [`systemrs_tlm_utils`] — quantum keeper, PEQs, LT↔AT adapters, convenience sockets.
+//! - [`systemrs_trace`] — stage-callback tracing and an off-thread telemetry writer.
+//! - [`systemrs_twin`] — the digital-twin layer (pacing, external input, replay).
 //! - [`systemrs_diag`] — reporting.
 //!
-//! ## Examples
+//! ## Quickstart
 //!
-//! The `systemrs-examples` crate ships reference models built on this facade:
-//! an enable-gated counter (clock + `SC_METHOD` + signals) and a basic RV32I CPU
-//! hart (`SC_THREAD` + `b_transport` over a socket to a memory target).
+//! A clock-driven counter — a `Clock`, an `SC_METHOD` sensitive to its rising edge,
+//! and a `Signal` carrying the count:
+//!
+//! ```
+//! use systemrs::prelude::*;
+//!
+//! let sim = Sim::new();
+//! let count: Signal<u32> = Signal::new(&sim, "count", 0);
+//! let clock = Clock::new(&sim, "clk", SimTime::from_ns(10));
+//!
+//! let mut n = 0u32;
+//! sim.method("counter")
+//!     .sensitive_to(clock.posedge_event())
+//!     .dont_initialize()
+//!     .finish(move |cx| {
+//!         n += 1;
+//!         count.write(cx, n);
+//!     });
+//!
+//! sim.run_until(SimTime::from_ns(45)); // posedges at 0,10,20,30,40 ns
+//! assert_eq!(count.read(&sim.ctx()), 5);
+//! ```
+//!
+//! The `systemrs-examples` crate ships fuller reference models: an enable-gated
+//! counter, an RV32I CPU hart over `b_transport`, a fixed-point guitar reverb, a
+//! DMA engine over the AT protocol, and a real-time sensor twin.
 
 pub use systemrs_channels as channels;
 pub use systemrs_core as core;

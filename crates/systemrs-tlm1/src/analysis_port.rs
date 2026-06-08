@@ -22,6 +22,33 @@ pub trait AnalysisWrite<T> {
 }
 
 /// A one-to-many synchronous broadcast port.
+///
+/// # Examples
+///
+/// One `write` fans out to every bound subscriber, in registration order:
+///
+/// ```
+/// use systemrs_tlm1::{AnalysisPort, AnalysisWrite};
+/// use std::cell::RefCell;
+/// use std::rc::Rc;
+///
+/// struct Sink(Rc<RefCell<Vec<i32>>>);
+/// impl AnalysisWrite<i32> for Sink {
+///     fn write(&self, v: &i32) {
+///         self.0.borrow_mut().push(*v);
+///     }
+/// }
+///
+/// let log = Rc::new(RefCell::new(Vec::new()));
+/// let port: AnalysisPort<i32> = AnalysisPort::new();
+/// let a = Rc::new(Sink(Rc::clone(&log)));
+/// let b = Rc::new(Sink(Rc::clone(&log)));
+/// port.bind(&a); // subscribers are held weakly; the caller keeps `a`/`b` alive
+/// port.bind(&b);
+///
+/// port.write(&42); // synchronous, in-order, no back-pressure
+/// assert_eq!(*log.borrow(), vec![42, 42]);
+/// ```
 pub struct AnalysisPort<T> {
     /// Bound subscribers, held weakly in registration order.
     subs: RefCell<Vec<Weak<dyn AnalysisWrite<T>>>>,

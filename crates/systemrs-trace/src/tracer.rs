@@ -21,6 +21,36 @@ use crate::sink::TraceSink;
 type Sampler = Box<dyn Fn(&Ctx) -> Option<TraceEvent>>;
 
 /// Drives observability sampling from the kernel's stage callbacks.
+///
+/// # Examples
+///
+/// Trace a signal into a [`MemorySink`](crate::MemorySink); samples are taken after
+/// each update commits, without perturbing the run:
+///
+/// ```
+/// use systemrs_trace::{MemorySink, Tracer};
+/// use systemrs_channels::Signal;
+/// use systemrs_kernel::Sim;
+/// use systemrs_time::SimTime;
+/// use std::rc::Rc;
+///
+/// let sim = Sim::new();
+/// let count: Signal<u32> = Signal::new(&sim, "count", 0);
+/// let sink = MemorySink::new();
+/// let tracer = Tracer::new(&sim, Rc::new(sink.clone()));
+/// tracer.trace_signal(count, "count");
+///
+/// sim.add_thread("driver", &[], true, move |cx| {
+///     for i in 1..=3 {
+///         cx.wait(SimTime::from_ns(1));
+///         count.write(cx, i);
+///     }
+/// });
+/// sim.run_until(SimTime::from_ns(10));
+///
+/// // The initial value plus each change were captured.
+/// assert!(sink.events().len() >= 3);
+/// ```
 pub struct Tracer {
     /// The per-signal samplers, run at each `PostUpdate`.
     samplers: RefCell<Vec<Sampler>>,

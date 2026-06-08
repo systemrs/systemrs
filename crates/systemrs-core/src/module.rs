@@ -70,6 +70,23 @@ fn open_scope(sim: &Sim, name: &str) -> Result<(ObjectId, ScopeGuard), ReportErr
 /// # Errors
 ///
 /// Returns a `SYSTEMRS/ELAB` error if called after the simulation has started.
+///
+/// # Examples
+///
+/// A named scope containing a nested child module (whose hierarchical name is
+/// `"top.inner"`):
+///
+/// ```
+/// use systemrs_core::module;
+/// use systemrs_kernel::Sim;
+///
+/// let sim = Sim::new();
+/// let top = module(&sim, "top", |b| {
+///     b.module("inner", |_inner| {}).expect("nested module");
+/// })
+/// .expect("called during elaboration");
+/// let _ = top; // the module's ObjectId in the object hierarchy
+/// ```
 pub fn module<F>(sim: &Sim, name: &str, build: F) -> Result<ObjectId, ReportError>
 where
     F: FnOnce(&mut Builder),

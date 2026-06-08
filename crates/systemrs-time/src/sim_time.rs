@@ -11,6 +11,17 @@ use core::ops::{Add, AddAssign, Sub};
 /// The convenience constructors (`from_ps`, `from_ns`, …) assume the default 1 ps
 /// resolution ([`crate::Resolution::PICOSECOND`]); for other resolutions use
 /// [`SimTime::from_units`].
+///
+/// # Examples
+///
+/// ```
+/// use systemrs_time::SimTime;
+///
+/// assert_eq!(SimTime::from_us(1), SimTime::from_ns(1_000)); // 1 µs = 1000 ns
+/// assert_eq!(SimTime::from_ns(5) + SimTime::from_ns(3), SimTime::from_ns(8));
+/// assert!(SimTime::from_ns(5) > SimTime::from_ns(3));
+/// assert_eq!(SimTime::from_ns(5).units(), 5_000); // counted in picoseconds
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct SimTime(u64);
 

@@ -51,6 +51,27 @@ impl<T: Copy + PartialEq + 'static> UpdatableChannel for SignalState<T> {
 /// `write` stages a value; `read` returns the value committed at the previous
 /// update. The value-changed event fires the delta after a committing write, and
 /// only when the value actually changed.
+///
+/// # Examples
+///
+/// A write in one delta is visible to a reader in the next:
+///
+/// ```
+/// use systemrs_channels::Signal;
+/// use systemrs_kernel::Sim;
+/// use systemrs_time::SimTime;
+///
+/// let sim = Sim::new();
+/// let sig: Signal<u32> = Signal::new(&sim, "s", 0);
+/// sim.add_thread("driver", &[], true, move |cx| {
+///     assert_eq!(sig.read(cx), 0); // the initial value
+///     sig.write(cx, 7);
+///     assert_eq!(sig.read(cx), 0); // not yet — still the old committed value
+///     cx.wait(SimTime::from_ns(1)); // cross an update boundary
+///     assert_eq!(sig.read(cx), 7); // now committed
+/// });
+/// sim.run_until(SimTime::from_ns(10));
+/// ```
 #[derive(Clone, Copy)]
 pub struct Signal<T: Copy> {
     /// The channel id in the kernel arena.

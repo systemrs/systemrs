@@ -14,6 +14,21 @@ use systemrs_kernel::{Ctx, Sim};
 /// A seeded SplitMix64 pseudo-random generator (a `Sim` service).
 ///
 /// Interior `Cell` so draws work through the shared `Rc<Rng>` the service map holds.
+///
+/// # Examples
+///
+/// The same seed reproduces the same sequence (the basis of deterministic replay):
+///
+/// ```
+/// use systemrs_twin::Rng;
+///
+/// let a = Rng::new(0xC0FFEE);
+/// let b = Rng::new(0xC0FFEE);
+/// assert_eq!(a.next_u64(), b.next_u64()); // identical sequences
+///
+/// let r = Rng::new(1);
+/// assert!((0..6).contains(&r.gen_range(0, 6))); // a die roll in [0, 6)
+/// ```
 #[derive(Debug)]
 pub struct Rng {
     /// The evolving generator state.

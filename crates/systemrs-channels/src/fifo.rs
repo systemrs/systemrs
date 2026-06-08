@@ -92,6 +92,38 @@ impl<T: 'static> FifoState<T> {
 /// `put`/`get` block (yield the calling thread) until space/data is available;
 /// `try_put`/`try_get` are the non-blocking forms. Written values become readable
 /// only in the following delta.
+///
+/// # Examples
+///
+/// A producer outruns a capacity-2 FIFO; `put` blocks until the consumer drains it,
+/// and order is preserved:
+///
+/// ```
+/// use systemrs_channels::Fifo;
+/// use systemrs_kernel::Sim;
+/// use systemrs_time::SimTime;
+/// use std::sync::{Arc, Mutex};
+///
+/// let sim = Sim::new();
+/// let fifo: Fifo<u32> = Fifo::new(&sim, "f", 2);
+/// let got = Arc::new(Mutex::new(Vec::new()));
+///
+/// let p = fifo;
+/// sim.add_thread("producer", &[], true, move |cx| {
+///     for i in 0..3 {
+///         p.put(cx, i); // blocks when full, until the consumer makes room
+///     }
+/// });
+/// let g = Arc::clone(&got);
+/// sim.add_thread("consumer", &[], true, move |cx| {
+///     for _ in 0..3 {
+///         g.lock().unwrap().push(fifo.get(cx));
+///     }
+/// });
+///
+/// sim.run_until(SimTime::from_ns(10));
+/// assert_eq!(*got.lock().unwrap(), vec![0, 1, 2]);
+/// ```
 #[derive(Clone, Copy)]
 pub struct Fifo<T> {
     /// The channel id.

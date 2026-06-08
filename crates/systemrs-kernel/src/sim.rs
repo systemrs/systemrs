@@ -51,6 +51,23 @@ where
 /// [`Sim::run_until`]; the static hierarchy is immutable once simulation starts.
 /// This is the runtime-checked analogue of the design's `Building → Running`
 /// typestate (`doc/systemrs-design.md` §6a).
+///
+/// # Examples
+///
+/// A timed thread and a one-shot method, run to completion:
+///
+/// ```
+/// use systemrs_kernel::Sim;
+/// use systemrs_time::SimTime;
+///
+/// let sim = Sim::new();
+/// // An SC_THREAD that waits, then the run ends at its starvation point.
+/// sim.add_thread("worker", &[], true, |cx| {
+///     cx.wait(SimTime::from_ns(10));
+/// });
+/// sim.run_until(SimTime::from_us(1));
+/// assert_eq!(sim.now(), SimTime::from_ns(10)); // stopped at starvation, not the deadline
+/// ```
 pub struct Sim {
     /// Shared kernel state, also handed to every [`Ctx`].
     inner: Rc<RefCell<Inner>>,

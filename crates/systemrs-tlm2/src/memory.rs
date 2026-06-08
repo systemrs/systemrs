@@ -16,6 +16,35 @@ use crate::socket::TargetSocket;
 /// `b_transport` callback services reads/writes. Access latency is modelled by
 /// calling `ctx.wait` *inside* `b_transport` — a direct demonstration of the
 /// design's stackful-coroutine property (`doc/systemrs-design.md` §6a).
+///
+/// # Examples
+///
+/// An initiator writes a word to memory and reads it back over a bound socket:
+///
+/// ```
+/// use systemrs_tlm2::{GenericPayload, InitiatorSocket, Memory, TargetSocket};
+/// use systemrs_kernel::Sim;
+/// use systemrs_time::SimTime;
+///
+/// let sim = Sim::new();
+/// let mem = Memory::new(256, SimTime::from_ns(5)); // 256 bytes, 5 ns/access
+/// let target = TargetSocket::new(&sim, "mem");
+/// mem.connect(&sim, &target);
+///
+/// let isock = InitiatorSocket::new(&sim, "cpu");
+/// isock.bind(&sim, &target);
+///
+/// sim.add_thread("cpu", &[], true, move |cx| {
+///     let mut delay = SimTime::ZERO;
+///     let mut wr = GenericPayload::write(0x40, 0xCAFEu32.to_le_bytes().to_vec());
+///     isock.b_transport(cx, &mut wr, &mut delay); // waits 5 ns inside
+///     let mut rd = GenericPayload::read(0x40, 4);
+///     isock.b_transport(cx, &mut rd, &mut delay);
+///     assert_eq!(u32::from_le_bytes(rd.data().try_into().unwrap()), 0xCAFE);
+/// });
+/// sim.run_until(SimTime::from_ns(100));
+/// assert_eq!(mem.read_u32(0x40), 0xCAFE); // backdoor read, no modelled latency
+/// ```
 #[derive(Clone)]
 pub struct Memory {
     /// The shared backing bytes.
