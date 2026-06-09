@@ -18,7 +18,7 @@ pub use systemrs_core::{
     ObjectMeta, ObjectStore, Running, module, module_with, store,
 };
 pub use systemrs_diag::{ReportHandler, Severity, Verbosity};
-pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim, Stage};
+pub use systemrs_kernel::{ChanId, Ctx, EventId, KernelSnapshot, ProcId, Sim, Stage};
 pub use systemrs_macros::module as module_macro;
 pub use systemrs_pdes::{
     BoundaryLink, LinkReceiver, LinkSender, LocalHost, Orchestrator, Region, RegionId,

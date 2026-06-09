@@ -44,6 +44,11 @@
 - [Deterministic replay](twins/replay.md)
 - [Worked example: a real-time sensor twin](twins/ex-twin.md)
 
+# Going Further
+
+- [Parallel execution](advanced/parallel.md)
+- [Snapshot and restore](advanced/snapshots.md)
+
 # Reference
 
 - [Architecture and crate map](reference/architecture.md)

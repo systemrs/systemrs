@@ -47,6 +47,7 @@ mod inner;
 mod phase;
 mod process;
 mod sim;
+mod snapshot;
 mod timed;
 
 pub use channel::UpdatableChannel;
@@ -55,6 +56,7 @@ pub use ids::{ChanId, EventId, ObjectId, ProcId};
 pub use phase::{GateOutcome, Phase, Stage, Starvation};
 pub use process::WakeReason;
 pub use sim::Sim;
+pub use snapshot::KernelSnapshot;
 
 #[cfg(test)]
 mod tests;

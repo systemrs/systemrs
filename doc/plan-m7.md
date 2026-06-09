@@ -1,6 +1,7 @@
 # Plan — Milestone 7: advanced subsystems (PDES Tier-1 first)
 
-> Status: **🚧 IN PROGRESS** — slice 1 (Parallel PDES Tier-1).
+> Status: **🚧 IN PROGRESS** — slice 1 (Parallel PDES Tier-1) ✅ and slice 2
+> (bounded snapshot/restore) ✅ complete; slice 3 (SystemC FFI) not started.
 > Roadmap context: §12 "Milestone 7+". Design refs: §8a (parallelization), §6f
 > (snapshot), §11 (interop). See [STATUS.md](../STATUS.md).
 
@@ -104,6 +105,47 @@ time before running it, so a process always observes the correct `now` at send t
 after idle quanta. `--verify-determinism` (E1) is the executable proof; the example
 exercises both `latency == quantum` (tightest) and `latency == 2·quantum` (in-flight
 across a barrier).
+
+---
+
+## Slice 2 — bounded snapshot/restore (✅ complete)
+
+**Mechanism (design §6f).** A `KernelSnapshot` captures the **kernel-visible** scheduler
+state at a *quiescent timestep boundary* — the determinism counters
+(`now`/`delta_count`/`change_stamp`/`seq`), the timed wheel, each event's pending
+notification + *ordered* dynamic subscriber lists, and each process's wait state — **not**
+the process bodies. Restore applies it to a **freshly rebuilt model** (same sequence of
+`alloc_event`/`add_method`/`add_thread`/channel calls, so generational ids align), marks
+the sim started (so the initialize pass is not re-run), and clears all transient
+runnable/update/delta work. The kernel checkpoints the *scheduler*; the *model* checkpoints
+its own serializable state (channels/services — the design's "arena columns") by saving it
+before the snapshot and restoring it after.
+
+**The bound (why it is "bounded").** Coroutine (`SC_THREAD`) stack frames cannot be
+serialized (transparent native-stack capture is research-grade, §6f). So byte-identical
+restore is guaranteed for **run-to-completion `SC_METHOD`s whose mutable state lives in
+channels/services** (a fresh closure + restored component state continues the original
+timeline exactly), while a thread holding live locals on its stack across a `wait` is out
+of scope. The single kernel seam is `snapshot.rs` (`Inner::is_quiescent`/`capture`/`apply`)
++ `Sim::snapshot`/`Sim::restore`; no change to the crunch loop.
+
+**Deferred (additive):** automatic channel serialization (a `Snapshot` trait on every
+channel type) and on-disk persistence (serialize `KernelSnapshot` to bytes/text); the
+first cut is an in-memory checkpoint/restore, which is the load-bearing capture/apply
+mechanism.
+
+**Exit criteria (met).**
+
+- **S1** — a method-based model snapshotted mid-run and restored onto a fresh rebuild
+  continues to a **byte-identical** trajectory → `systemrs-kernel` unit test
+  `snapshot::tests::snapshot_restore_continues_byte_identical` + the `checkpoint` example's
+  `snapshot_restore::checkpoint_continues_byte_identical`.
+- **S2** — snapshot is gated to a quiescent boundary (errors otherwise) →
+  `Sim::snapshot` returns `SYSTEMRS/SNAPSHOT`; `snapshot_is_quiescent_after_a_settled_run`.
+
+**Files:** `crates/systemrs-kernel/src/snapshot.rs` (+ `Sim::snapshot`/`restore` in
+`sim.rs`, `KernelSnapshot` export); `crates/systemrs-examples/src/checkpoint.rs` +
+`examples/checkpoint.rs` + `tests/snapshot_restore.rs`; facade/prelude re-export.
 
 ## Verification
 

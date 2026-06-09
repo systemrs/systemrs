@@ -77,7 +77,7 @@ pub use systemrs_core::{
     ObjectMeta, ObjectStore, Running, module, module_with, store,
 };
 pub use systemrs_diag::{ActionFlags, ReportHandler, Severity, Verbosity};
-pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim, Stage};
+pub use systemrs_kernel::{ChanId, Ctx, EventId, KernelSnapshot, ProcId, Sim, Stage};
 pub use systemrs_pdes::{
     BoundaryLink, LinkReceiver, LinkSender, LocalHost, LocalLink, Orchestrator,
     OrchestratorBuilder, PdesError, Region, RegionId, assert_traces_match, global_quantum_boundary,

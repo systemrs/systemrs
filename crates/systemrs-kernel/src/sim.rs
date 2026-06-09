@@ -498,6 +498,60 @@ impl Sim {
         self.elaborate_once();
     }
 
+    /// Captures a bounded snapshot of the kernel scheduler state
+    /// (`doc/systemrs-design.md` §6f), valid only at a quiescent timestep boundary
+    /// (between `run_until` calls).
+    ///
+    /// The snapshot captures the scheduler timeline — the determinism counters, the timed
+    /// wheel, each event's pending notification and dynamic subscriptions, and each
+    /// process's wait state — **not** the process bodies (coroutine stacks are not
+    /// serializable). Restore it onto a freshly rebuilt model with [`Sim::restore`].
+    /// Model state held in channels/services is the model author's to save and restore
+    /// alongside; see [`KernelSnapshot`](crate::KernelSnapshot) for what restores
+    /// byte-identically (run-to-completion methods with channel-resident state).
+    ///
+    /// # Returns
+    ///
+    /// The snapshot.
+    ///
+    /// # Errors
+    ///
+    /// `SYSTEMRS/SNAPSHOT` if the kernel is not at a quiescent boundary (a process is
+    /// running or runnable, or there is pending update/delta work).
+    pub fn snapshot(&self) -> Result<crate::KernelSnapshot, ReportError> {
+        let g = self.inner.borrow();
+        if !g.is_quiescent() {
+            return Err(systemrs_diag::error(
+                "SYSTEMRS/SNAPSHOT",
+                "snapshot requires a quiescent timestep boundary (no running or runnable \
+                 process, no pending update or delta)",
+            ));
+        }
+        Ok(g.capture())
+    }
+
+    /// Restores a [`KernelSnapshot`](crate::KernelSnapshot) onto this simulation.
+    ///
+    /// The simulation must be a freshly rebuilt model — constructed with the same
+    /// sequence of `alloc_event`/`add_method`/`add_thread`/channel calls as the
+    /// snapshotted one, so the generational ids line up. Elaboration is driven first if
+    /// it has not run. Afterward the simulation resumes from the snapshot's time as if it
+    /// had never stopped: continue with `run_until` (restore the model's own
+    /// channel/service state, saved alongside the snapshot, before running).
+    ///
+    /// # Arguments
+    ///
+    /// * `snapshot` - The snapshot to apply.
+    ///
+    /// # Errors
+    ///
+    /// `SYSTEMRS/SNAPSHOT` if the rebuilt model does not match the snapshot (different
+    /// process/event count, or a named id absent).
+    pub fn restore(&self, snapshot: &crate::KernelSnapshot) -> Result<(), ReportError> {
+        self.elaborate();
+        self.inner.borrow_mut().apply(snapshot)
+    }
+
     /// Fires the end-of-simulation teardown hooks exactly once, in registration
     /// order.
     ///

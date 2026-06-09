@@ -25,19 +25,28 @@ from here:
   the rationale behind every decision this guide paraphrases, with the `§…` sections
   cited throughout. Read the section a chapter points to when you want the *why* in full.
 
+## Beyond the modelling core
+
+Two capabilities reach past the single-threaded modelling core, both covered in the
+**Going Further** part:
+
+- **[Parallel execution](../advanced/parallel.md)** — deterministic, barrier-synchronous
+  PDES that runs disjoint regions in parallel and re-converges at quantum boundaries, with
+  a Tier-1 run bit-identical to the serial Tier-0 reference (design §8a).
+- **[Snapshot and restore](../advanced/snapshots.md)** — bounded checkpointing: capture
+  the scheduler at a quiescent boundary and resume from it (design §6f).
+
 ## On the horizon
 
-A couple of things this guide does not yet cover, because they are not yet built:
+One major piece is designed but not yet built:
 
 - **SystemC interoperability** (`systemrs-ffi`) — running Rust models as guests inside a
   C++ SystemC kernel, and eventually the reverse and out-of-process co-simulation
   (design §11). A *migration guide* for SystemC users will land alongside it.
-- **Optional parallel execution** — barrier-synchronous parallel discrete-event
-  simulation that runs disjoint regions in parallel and re-converges at quantum
-  boundaries, preserving deterministic replay (design §8a).
 
-Until then: the deterministic single-threaded core is the golden reference, and it is
-everything you need to model and observe a digital system as a twin.
+The deterministic single-threaded core remains the golden reference — everything you need
+to model and observe a digital system as a twin, and the reference a parallel run is
+verified against.
 
 [`systemrs-modeling` skill]: https://github.com/systemrs/systemrs-modeling-skill
 [`doc/systemrs-design.md`]: https://github.com/londey/systemrs/blob/master/doc/systemrs-design.md

@@ -1,7 +1,7 @@
 # Determinism guarantees
 
 Determinism is not a nice-to-have in SystemRS — it is the product. Every other feature
-(replay, twins, trustworthy telemetry, future parallelism) rests on it. This chapter
+(replay, twins, trustworthy telemetry, parallel execution) rests on it. This chapter
 collects the guarantees and what preserves them.
 
 ## What is guaranteed
@@ -35,6 +35,9 @@ the same sequence of channel updates, event firings, and transactions, at the sa
 - **Temporal-decoupling quantum length.** A larger quantum is faster and coarser, but the
   *number and timing of syncs is deterministic* for a given quantum. ([temporal
   decoupling](../tlm/temporal-decoupling.md))
+- **Parallel execution.** Running a partitioned model across threads via the
+  [parallel tier](../advanced/parallel.md) yields a result bit-identical to the serial run
+  with the same quantum and partition — independent of thread count or timing.
 
 ## What you must not do
 

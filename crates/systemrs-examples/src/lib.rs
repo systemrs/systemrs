@@ -19,6 +19,7 @@
 //!   readings (park/resume), a `RealTimePacer`, seeded-noise processing, an
 //!   `AnalysisPort` meter, and a journal that replays byte-identically.
 
+pub mod checkpoint;
 pub mod counter;
 pub mod dma;
 pub mod pipeline;

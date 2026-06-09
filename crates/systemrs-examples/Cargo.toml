@@ -39,3 +39,7 @@ path = "examples/twin.rs"
 [[example]]
 name = "pipeline"
 path = "examples/pipeline.rs"
+
+[[example]]
+name = "checkpoint"
+path = "examples/checkpoint.rs"

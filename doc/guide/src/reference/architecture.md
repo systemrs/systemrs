@@ -13,7 +13,7 @@ tracking down where a type lives.
 | L4 | `systemrs-tlm1`, `systemrs-tlm2` | Analysis ports; the generic payload, transport, sockets, `Memory` |
 | L5 | `systemrs-tlm-utils`, `systemrs-trace` | Quantum keeper, PEQs, adapters; tracing & sinks |
 | L6 | `systemrs-twin`, **`systemrs`** | The digital-twin layer; the **facade** that re-exports the public API |
-| L7 | `systemrs-examples` | The reference models and integration tests |
+| L7 | `systemrs-pdes`, `systemrs-examples` | The parallel-PDES orchestrator (optional `rayon`); the reference models and integration tests |
 
 Two structural invariants are worth internalising:
 
@@ -21,9 +21,12 @@ Two structural invariants are worth internalising:
   observability layers, state is `Rc`/`RefCell` — one process runs at a time, so there is
   no in-model data race to guard. This is a *feature*: it is what makes the schedule
   deterministic and the arenas cheap.
-- **The twin layer is the only `Send` boundary.** `systemrs-twin` (L6) is where external
-  input and the off-thread telemetry writer cross threads — and they do so through two
-  audited primitives (an mpsc inbox, a stop signal), leaving the core untouched.
+- **`Send` boundaries are few and audited.** The single-threaded core never crosses
+  threads. `systemrs-twin` (L6) is where external input and the off-thread telemetry
+  writer do, through two audited primitives (an mpsc inbox, a stop signal). The optional
+  [parallel PDES](../advanced/parallel.md) tier adds a second, *feature-gated* boundary —
+  a single `unsafe impl Send for Region`, compiled only under `rayon` — so with parallelism
+  off the core is entirely `Send`-free.
 
 The proc-macro crate has no workspace dependencies and emits fully-qualified
 `::systemrs::…` paths, so the facade can re-export the macros without a dependency cycle.

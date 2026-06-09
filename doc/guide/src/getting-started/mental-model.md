@@ -10,6 +10,11 @@ instant; it runs until it finishes (a method) or voluntarily `wait`s (a thread).
 is no preemption and no in-model data race — which is *why* the core uses `Rc`/`RefCell`
 rather than `Arc`/`Mutex`. The scheduler, not your code, decides who runs next.
 
+(A large model can still run *across* threads, deterministically, via the optional
+[parallel tier](../advanced/parallel.md) — but it does so by running several of these
+single-threaded kernels and re-converging at quantum boundaries, so this mental model
+holds unchanged within each one.)
+
 ## 2. The three-phase delta cycle
 
 Simulation time advances in discrete steps, and within a single instant of time the
