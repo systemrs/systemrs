@@ -19,9 +19,16 @@ systemrs-tlm2.workspace = true
 systemrs-tlm-utils.workspace = true
 systemrs-trace.workspace = true
 systemrs-twin.workspace = true
+systemrs-pdes.workspace = true
 # The facade is the ONLY crate that depends on the proc-macro crate, so it can
 # re-export the macros without any other crate forming a dependency cycle.
 systemrs-macros.workspace = true
+
+[features]
+default = []
+# Enable the optional rayon-backed parallel execution of the Tier-1 PDES orchestrator.
+# Off by default; the orchestrator is correct and deterministic without it.
+pdes-rayon = ["systemrs-pdes/rayon"]
 
 [lints]
 workspace = true

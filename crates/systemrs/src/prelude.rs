@@ -20,6 +20,10 @@ pub use systemrs_core::{
 pub use systemrs_diag::{ReportHandler, Severity, Verbosity};
 pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim, Stage};
 pub use systemrs_macros::module as module_macro;
+pub use systemrs_pdes::{
+    BoundaryLink, LinkReceiver, LinkSender, LocalHost, Orchestrator, Region, RegionId,
+    global_quantum_boundary,
+};
 pub use systemrs_time::{Resolution, SimTime};
 pub use systemrs_tlm_utils::{
     AtToLtAdapter, GlobalQuantum, LtToAtAdapter, PeqWithGet, PhaseQueue, QuantumKeeper,

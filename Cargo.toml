@@ -20,6 +20,7 @@ members = [
     "crates/systemrs-tlm-utils",
     "crates/systemrs-trace",
     "crates/systemrs-twin",
+    "crates/systemrs-pdes",
     "crates/systemrs",
     "crates/systemrs-examples",
 ]
@@ -45,6 +46,7 @@ systemrs-tlm2 = { path = "crates/systemrs-tlm2", version = "0.1.0" }
 systemrs-tlm-utils = { path = "crates/systemrs-tlm-utils", version = "0.1.0" }
 systemrs-trace = { path = "crates/systemrs-trace", version = "0.1.0" }
 systemrs-twin = { path = "crates/systemrs-twin", version = "0.1.0" }
+systemrs-pdes = { path = "crates/systemrs-pdes", version = "0.1.0" }
 
 # External: bit-accurate fixed-point (Q-notation) for the DSP examples. SystemRS
 # deliberately drops `sc_dt` (design §3.12) — models bring their own datatypes and
@@ -72,6 +74,9 @@ corosensei = { version = "0.3", default-features = false, features = [
     "unwind",
 ] }
 thiserror = { version = "2", default-features = false }
+# rayon for the optional Tier-1 PDES parallel backend (systemrs-pdes `rayon` feature).
+# Needs its default features (the work-stealing pool + the parallel-iterator prelude).
+rayon = { version = "1" }
 
 [workspace.lints.rust]
 missing_docs = "warn"

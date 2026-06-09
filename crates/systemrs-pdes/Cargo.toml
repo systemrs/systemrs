@@ -1,0 +1,28 @@
+[package]
+name = "systemrs-pdes"
+description = "Tier-1 conservative, barrier-synchronous parallel discrete-event simulation (PDES) for SystemRS: quantum-synchronized regions with deterministic cross-region exchange."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Tier-1 orchestration wraps N Tier-0 kernels; the intra-region kernel is unchanged.
+systemrs-kernel.workspace = true
+systemrs-time.workspace = true
+systemrs-diag.workspace = true
+# rayon is an OPTIONAL performance switch, NOT a correctness dependency. The
+# orchestrator is correct and deterministic running regions sequentially; the `rayon`
+# feature only swaps the run-to-boundary and commit phases to `par_iter_mut`. The
+# single `unsafe impl Send for RegionHandle` is compiled only under this feature.
+rayon = { workspace = true, optional = true }
+thiserror.workspace = true
+
+[features]
+default = []
+rayon = ["dep:rayon"]
+
+[lints]
+workspace = true

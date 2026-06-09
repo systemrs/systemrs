@@ -125,6 +125,34 @@ impl Sim {
         self.inner.borrow_mut().alloc_event()
     }
 
+    /// Schedules `ev` to fire at the **absolute** simulation time `when`, usable
+    /// *between* [`Sim::run_until`] calls.
+    ///
+    /// This is the one kernel seam the Tier-1 PDES orchestrator (`systemrs-pdes`) needs:
+    /// at a quantum barrier it injects each cross-region message's wake at its exact
+    /// `deliver_at`. The delivery reuses the existing timed wheel (`(when, seq)` order),
+    /// so an injected event is ordered against a region's intra-region timed events
+    /// exactly as a native timed notification would be.
+    ///
+    /// # Arguments
+    ///
+    /// * `ev` - The event to fire (typically a boundary link's arrival event).
+    /// * `when` - The absolute fire time. A `when` at or before `now` is delivered at
+    ///   the current instant (as a delta notification, drained at the next `run_until`).
+    pub fn schedule_event_at(&self, ev: EventId, when: SimTime) {
+        let mut g = self.inner.borrow_mut();
+        if when <= g.now {
+            // Deliver at the current instant: arm a delta so the waiter wakes this/next
+            // delta at `now`. `run_until` drains a pending delta before crunching, so the
+            // wake is never lost to the empty-delta guard. (The conservative-PDES
+            // lookahead keeps `when > now` for cross-region links; this is the safe
+            // fallback for a same-instant injection.)
+            g.notify_delta(ev);
+        } else {
+            g.schedule_event_at(ev, when);
+        }
+    }
+
     /// Registers an updatable channel and returns its id.
     ///
     /// # Arguments
@@ -350,6 +378,13 @@ impl Sim {
         let _guard = ctx::install_current(&self.inner);
         self.elaborate_once();
         self.ensure_started();
+
+        // Drain a delta injected between runs (e.g. a Tier-1 PDES boundary delivery
+        // scheduled for the current instant via `schedule_event_at`) so its wake is not
+        // lost to the empty-delta guard. A no-op for any model that did not inject one.
+        if self.inner.borrow().has_pending_delta() {
+            self.commit_and_notify();
+        }
 
         loop {
             self.crunch();

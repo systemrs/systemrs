@@ -276,6 +276,21 @@ impl Inner {
         }
     }
 
+    /// Arms a timed notification on `ev` at an **absolute** time `when`, replacing any
+    /// pending notification on it.
+    ///
+    /// Used by the Tier-1 PDES orchestrator (`systemrs-pdes`) at a quantum barrier to
+    /// inject a cross-region delivery at its exact `deliver_at`. Unlike `notify_timed`
+    /// (relative, with the immediate/delta/timed collapse), this is an unconditional
+    /// absolute arm: the orchestrator owns the schedule between runs and wants
+    /// exactly-this-time semantics. Reuses the timed wheel's `(when, seq)` order, so an
+    /// injected delivery orders against intra-region timed events exactly as a native
+    /// one would.
+    pub(crate) fn schedule_event_at(&mut self, ev: EventId, when: SimTime) {
+        self.cancel(ev);
+        self.arm_timed(ev, when);
+    }
+
     /// Cancels any pending notification on an event.
     pub(crate) fn cancel(&mut self, ev: EventId) {
         match self.events[ev].pending {

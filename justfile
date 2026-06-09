@@ -38,6 +38,10 @@ build-release *args:
 test *args:
     scripts/test.sh {{args}}
 
+# Exercise the optional rayon-backed Tier-1 PDES backend (lints the `unsafe` + E5 parity).
+pdes-rayon *args:
+    scripts/pdes-rayon.sh {{args}}
+
 # Build and test on the Minimum Supported Rust Version (installs it if needed).
 msrv:
     scripts/msrv.sh

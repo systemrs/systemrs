@@ -21,6 +21,7 @@
 
 pub mod counter;
 pub mod dma;
+pub mod pipeline;
 pub mod platform;
 pub mod reverb;
 pub mod rv32i;

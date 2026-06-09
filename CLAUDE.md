@@ -143,7 +143,8 @@ These constraints are *why* the design is the way it is. Violating them breaks t
 
 ## Crate structure (design doc §10)
 
-A 14-crate workspace under `crates/`, layered acyclically (L0 lowest → L7 highest). The RTL
+A 15-crate workspace under `crates/`, layered acyclically (L0 lowest → L7 highest) — the
+14 crates of design §10 plus `systemrs-pdes` (the M7 Tier-1 PDES orchestrator). The RTL
 `sc_dt` datatypes library is deliberately **not** a crate.
 
 - **L0 leaves:** `systemrs-diag` (reporting), `systemrs-time` (`SimTime`), `systemrs-runtime`
@@ -156,8 +157,11 @@ A 14-crate workspace under `crates/`, layered acyclically (L0 lowest → L7 high
 - **L5:** `systemrs-tlm-utils` (quantum keeper, PEQs, convenience sockets, LT↔AT adapters),
   `systemrs-trace` (sampling, recorders, VCD/FST).
 - **L6:** `systemrs` (facade/prelude re-exporting the public API; depends on all except ffi/examples).
-- **L7:** `systemrs-ffi` (C ABI / `cxx` SystemC interop), `systemrs-examples` (examples +
-  cross-crate conformance/integration tests; dev-deps `insta`, `criterion`).
+- **L7:** `systemrs-pdes` (M7 Tier-1 conservative barrier-synchronous PDES: regions wrap Tier-0
+  kernels, quantum-synchronized with deterministic cross-region exchange; the single audited
+  `unsafe impl Send` is gated behind the optional `rayon` feature), `systemrs-ffi` (C ABI /
+  `cxx` SystemC interop — still unbuilt), `systemrs-examples` (examples + cross-crate
+  conformance/integration tests; dev-deps `insta`, `criterion`).
 
 The proc-macro crate has no workspace deps and emits path-qualified `::systemrs::…` code so the
 facade re-exports macros without a dependency cycle.

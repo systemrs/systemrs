@@ -59,6 +59,7 @@ pub use systemrs_channels as channels;
 pub use systemrs_core as core;
 pub use systemrs_diag as diag;
 pub use systemrs_kernel as kernel;
+pub use systemrs_pdes as pdes;
 pub use systemrs_tlm_utils as tlm_utils;
 pub use systemrs_tlm1 as tlm1;
 pub use systemrs_tlm2 as tlm2;
@@ -77,6 +78,10 @@ pub use systemrs_core::{
 };
 pub use systemrs_diag::{ActionFlags, ReportHandler, Severity, Verbosity};
 pub use systemrs_kernel::{ChanId, Ctx, EventId, ProcId, Sim, Stage};
+pub use systemrs_pdes::{
+    BoundaryLink, LinkReceiver, LinkSender, LocalHost, LocalLink, Orchestrator,
+    OrchestratorBuilder, PdesError, Region, RegionId, assert_traces_match, global_quantum_boundary,
+};
 pub use systemrs_time::{Resolution, SimTime};
 pub use systemrs_tlm_utils::{
     AtMemory, AtToLtAdapter, GlobalQuantum, LtToAtAdapter, MultiTargetSocket,

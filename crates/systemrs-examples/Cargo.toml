@@ -35,3 +35,7 @@ path = "examples/dma.rs"
 [[example]]
 name = "twin"
 path = "examples/twin.rs"
+
+[[example]]
+name = "pipeline"
+path = "examples/pipeline.rs"
