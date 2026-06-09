@@ -26,8 +26,8 @@ pub use systemrs_pdes::{
 };
 pub use systemrs_time::{Resolution, SimTime};
 pub use systemrs_tlm_utils::{
-    AtToLtAdapter, GlobalQuantum, LtToAtAdapter, PeqWithGet, PhaseQueue, QuantumKeeper,
-    set_global_quantum,
+    AtToLtAdapter, BusFault, BusMaster, GlobalQuantum, Interconnect, IrqLine, LtToAtAdapter,
+    PeqWithGet, PhaseQueue, QuantumKeeper, irq_wake_event, set_global_quantum,
 };
 pub use systemrs_tlm1::{AnalysisFifo, AnalysisPort, AnalysisWrite};
 pub use systemrs_tlm2::{

@@ -84,9 +84,10 @@ pub use systemrs_pdes::{
 };
 pub use systemrs_time::{Resolution, SimTime};
 pub use systemrs_tlm_utils::{
-    AtMemory, AtToLtAdapter, GlobalQuantum, LtToAtAdapter, MultiTargetSocket,
-    PassthroughTargetSocket, PeqWithGet, PhaseQueue, QuantumKeeper, SimpleInitiatorSocket,
-    SimpleTargetSocket, TxnId, next_phase, set_global_quantum,
+    AtMemory, AtToLtAdapter, BusFault, BusMaster, GlobalQuantum, Interconnect, IrqLine,
+    LtToAtAdapter, MultiTargetSocket, PassthroughTargetSocket, PeqWithGet, PhaseQueue,
+    QuantumKeeper, SimpleInitiatorSocket, SimpleTargetSocket, TxnId, irq_wake_event, next_phase,
+    set_global_quantum,
 };
 pub use systemrs_tlm1::{AnalysisFifo, AnalysisPort, AnalysisTriple, AnalysisWrite};
 pub use systemrs_tlm2::{

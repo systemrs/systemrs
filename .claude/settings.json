@@ -1,3 +1,9 @@
 {
+  "permissions": {
+    "allow": [
+      "Skill(claude-skill-rust)",
+      "Skill(claude-skill-rust:*)"
+    ]
+  },
   "effortLevel": "xhigh"
 }

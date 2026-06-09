@@ -25,6 +25,10 @@ name = "rv32i_hart"
 path = "examples/rv32i_hart.rs"
 
 [[example]]
+name = "rv32i_soc"
+path = "examples/rv32i_soc.rs"
+
+[[example]]
 name = "reverb"
 path = "examples/reverb.rs"
 
