@@ -1,9 +1,11 @@
 # Plan — Milestone 7: advanced subsystems (PDES Tier-1 first)
 
-> Status: **🚧 IN PROGRESS** — slice 1 (Parallel PDES Tier-1) ✅ and slice 2
-> (bounded snapshot/restore) ✅ complete; slice 3 (SystemC FFI) not started.
-> Roadmap context: §12 "Milestone 7+". Design refs: §8a (parallelization), §6f
-> (snapshot), §11 (interop). See [STATUS.md](../STATUS.md).
+> Status: **✅ COMPLETE** — slice 1 (Parallel PDES Tier-1), slice 2 (bounded
+> snapshot/restore), and slice 3 (SystemC-interop *seam* + the smaller deferred items:
+> kill, hot-swap) all done; the actual SystemC C++ bridge is a **separate repo** against
+> the seam (deliberately out-of-tree). Roadmap context: §12 "Milestone 7+". Design refs:
+> §8a (parallelization), §6f (snapshot/hot-swap), §6a (kill), §11 (interop). See
+> [STATUS.md](../STATUS.md).
 
 ## Scope
 
@@ -146,6 +148,51 @@ mechanism.
 **Files:** `crates/systemrs-kernel/src/snapshot.rs` (+ `Sim::snapshot`/`restore` in
 `sim.rs`, `KernelSnapshot` export); `crates/systemrs-examples/src/checkpoint.rs` +
 `examples/checkpoint.rs` + `tests/snapshot_restore.rs`; facade/prelude re-export.
+
+---
+
+## Slice 3 — SystemC interop seam + the smaller deferred items (✅ complete)
+
+**Packaging decision (revises design §10/§11).** SystemC co-simulation is **not** an
+in-tree `systemrs-ffi` crate. The core stays **pure Rust** (no C++ build, no CMake, no
+`cosim` feature); the C++ bridge lives in a **separate repo** (`systemrs/systemrs-systemc`)
+depending one-way on `systemrs` and vendoring/building SystemC itself — the same
+separate-repo discipline as `qfixed` and the modeling skill. This repo provides the
+**generic seam** the bridge plugs into, which is exactly the bounded structural-hot-swap
+mechanism §6f calls for.
+
+- **The transport seam (hot-swap + bridge plug-point).** A target's forward transport is
+  a swappable `Rc<RefCell<dyn FwTransport>>` installed via
+  `TargetSocket::set_fw_transport`, replaceable at a quiescent point without rebinding
+  (the socket's `ObjectId` is unchanged). A native target implements `FwTransport`
+  directly; an out-of-tree bridge implements it by trampolining each call into the C++
+  kernel. The generic-payload byte API is the marshaling boundary; the symmetric
+  panic/exception firewall (§11.2/§11.6) is the bridge's to enforce. (For full
+  re-entrancy across a `wait`, the `&self` `register_b_transport` path remains.)
+- **Kill (full throw/unwind semantics).** `Ctx::kill(pid)` marks a process dead and, for
+  a parked `SC_THREAD`, **force-unwinds its coroutine stack, running destructors** (via
+  `corosensei` drop-unwind) — upgrading the prior cooperative-only cancellation (§6a). A
+  self-kill marks dead and is reaped at teardown; a method has no stack to unwind. *Reset*
+  (restart from the top) needs a re-buildable body factory and is a documented follow-on.
+
+**Exit criteria (met).**
+
+- **T1** — a target's forward transport is hot-swapped at a quiescent point and the new
+  target services subsequent transactions, with the binding intact →
+  `hot_swap::fw_transport_hot_swap_at_quiescent_point`.
+- **T2** — `kill` force-unwinds a parked thread, running its destructors →
+  `systemrs-kernel` `ctx::tests::kill_force_unwinds_a_parked_thread`.
+
+**Files:** `crates/systemrs-tlm2/src/socket.rs` (`TargetSocket::set_fw_transport`, reusing
+`protocol::FwTransport`); `crates/systemrs-kernel/src/ctx.rs` (`Ctx::kill`);
+`crates/systemrs-examples/tests/hot_swap.rs`; facade/prelude `FwTransport` re-export; the
+packaging decision recorded in the design doc §11, `CLAUDE.md`, `README.md`, root
+`Cargo.toml`.
+
+**Deferred (separate bridge repo / follow-ons):** the actual C++ SystemC bridge (Phase 1
+Rust-guests-in-C++, then Phases 2/3); `reset` (needs a body factory); and the deep
+kernel-guest seam where a *foreign* scheduler drives Rust process bodies (§7's "keep the
+`Ctx`/suspend backend seam clean").
 
 ## Verification
 

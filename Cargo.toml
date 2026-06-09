@@ -1,10 +1,11 @@
 # Workspace root (virtual manifest) for SystemRS.
 #
-# See `doc/systemrs-design.md` §10 for the full 14-crate plan. This workspace
-# implements the deterministic core, the TLM-2.0 LT path, and (from M4) the AT/PEQ
-# temporal-decoupling utilities (`-tlm-utils`). The interop (`-ffi`), tracing
-# backends (`-trace`), and TLM-1 analysis (`-tlm1`) crates from the design remain
-# deferred per the roadmap (§12, M5+).
+# See `doc/systemrs-design.md` §10 for the original crate plan. This workspace
+# implements the deterministic core, the full TLM-2.0 LT+AT path (`-tlm-utils`),
+# observability (`-tlm1`/`-trace`), the digital-twin layer (`-twin`), and the M7
+# parallel-PDES tier (`-pdes`). SystemC interop (`-ffi`) is deliberately NOT a crate
+# here: it lives in a separate bridge repo against this repo's pure-Rust `FwTransport`
+# seam, so the core never depends on a C++ toolchain (revises design §10/§11).
 [workspace]
 resolver = "3"
 members = [

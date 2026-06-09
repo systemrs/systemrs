@@ -40,9 +40,12 @@ Two capabilities reach past the single-threaded modelling core, both covered in 
 
 One major piece is designed but not yet built:
 
-- **SystemC interoperability** (`systemrs-ffi`) — running Rust models as guests inside a
-  C++ SystemC kernel, and eventually the reverse and out-of-process co-simulation
-  (design §11). A *migration guide* for SystemC users will land alongside it.
+- **SystemC interoperability** — running Rust models as guests inside a C++ SystemC kernel,
+  and eventually the reverse and out-of-process co-simulation (design §11). It lives in a
+  **separate bridge repo** (so this core stays pure Rust) that plugs into the in-core seam:
+  a swappable `Rc<dyn FwTransport>` forward-transport target
+  (`TargetSocket::set_fw_transport`) plus the generic-payload byte API. A *migration guide*
+  for SystemC users will land alongside it.
 
 The deterministic single-threaded core remains the golden reference — everything you need
 to model and observe a digital system as a twin, and the reference a parallel run is

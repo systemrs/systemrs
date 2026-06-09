@@ -90,8 +90,8 @@ pub use systemrs_tlm_utils::{
 };
 pub use systemrs_tlm1::{AnalysisFifo, AnalysisPort, AnalysisTriple, AnalysisWrite};
 pub use systemrs_tlm2::{
-    BwBaseProtocol, ByteEnable, Command, Dmi, DmiAccess, GenericPayload, InitiatorSocket, Memory,
-    Phase, ResponseStatus, TargetSocket, TlmSync, Txn, TxnPool,
+    BwBaseProtocol, ByteEnable, Command, Dmi, DmiAccess, FwTransport, GenericPayload,
+    InitiatorSocket, Memory, Phase, ResponseStatus, TargetSocket, TlmSync, Txn, TxnPool,
 };
 pub use systemrs_trace::{
     MemorySink, TraceCommand, TraceEvent, TraceResponse, TraceSink, Tracer, TxnRecord, WriterSink,

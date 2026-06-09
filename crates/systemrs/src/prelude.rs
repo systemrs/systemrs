@@ -31,8 +31,8 @@ pub use systemrs_tlm_utils::{
 };
 pub use systemrs_tlm1::{AnalysisFifo, AnalysisPort, AnalysisWrite};
 pub use systemrs_tlm2::{
-    ByteEnable, Command, GenericPayload, InitiatorSocket, Memory, Phase, ResponseStatus,
-    TargetSocket, TlmSync, Txn, TxnPool,
+    ByteEnable, Command, FwTransport, GenericPayload, InitiatorSocket, Memory, Phase,
+    ResponseStatus, TargetSocket, TlmSync, Txn, TxnPool,
 };
 pub use systemrs_trace::{MemorySink, TraceEvent, TraceSink, Tracer, WriterSink};
 pub use systemrs_twin::{

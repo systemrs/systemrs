@@ -26,7 +26,7 @@ use systemrs_time::SimTime;
 use crate::gp::GenericPayload;
 use crate::mm::Txn;
 use crate::phase::{Phase, TlmSync};
-use crate::protocol::{BaseProtocol, BwBaseProtocol, Dmi};
+use crate::protocol::{BaseProtocol, BwBaseProtocol, Dmi, FwTransport};
 
 /// A registered blocking-transport callback.
 ///
@@ -422,6 +422,40 @@ impl TargetSocket {
             .entry(self.id)
             .or_default()
             .b_transport = Some(Rc::new(callback));
+    }
+
+    /// Installs — or, at a quiescent runtime point, **replaces** — this target's forward
+    /// transport implementation as a shared [`FwTransport`] trait
+    /// object, keeping the socket binding intact.
+    ///
+    /// This is the bounded structural hot-swap of `doc/systemrs-design.md` §6f (a
+    /// replaceable `Rc<dyn FwTransport>` target at a quiescent point) and the seam an
+    /// **out-of-tree interop bridge** plugs into (§11) — a SystemC co-simulation bridge,
+    /// for example, implements `FwTransport` by trampolining each call into the C++
+    /// kernel, so the core needs no foreign build dependency. Initiators keep working
+    /// across the swap because the socket's [`ObjectId`] never changes. It installs the
+    /// trait's `b_transport` and `transport_dbg`, overwriting any previously registered
+    /// forward callbacks.
+    ///
+    /// The target is borrowed mutably for the duration of each call (the trait takes
+    /// `&mut self`). A target that `wait`s *and* may be re-entered by a second initiator
+    /// before returning must instead use [`register_b_transport`](Self::register_b_transport)
+    /// with `&self` interior mutability (the re-entrancy-safe path).
+    ///
+    /// # Arguments
+    ///
+    /// * `sim` - The simulation.
+    /// * `target` - The forward-transport implementation (shared, swappable).
+    pub fn set_fw_transport(&self, sim: &Sim, target: Rc<RefCell<dyn FwTransport>>) {
+        let bt = Rc::clone(&target);
+        let dbg = target;
+        let reg = registry(sim);
+        let mut reg = reg.borrow_mut();
+        let entry = reg.targets.entry(self.id).or_default();
+        entry.b_transport = Some(Rc::new(move |cx, gp, delay| {
+            bt.borrow_mut().b_transport(cx, gp, delay);
+        }));
+        entry.transport_dbg = Some(Rc::new(move |gp| dbg.borrow_mut().transport_dbg(gp)));
     }
 
     /// Registers the debug-transport callback.

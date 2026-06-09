@@ -1247,6 +1247,8 @@ The proc-macro crate carries `[lib] proc-macro = true` and depends only on `proc
 
 Co-simulation is the make-or-break adoption lever. A Rust TLM framework that cannot plug into the installed base of SystemC virtual platforms is a research toy.
 
+> **Revised packaging (M7).** The SystemC bridge is **not** an in-tree `systemrs-ffi` crate (as §10 originally listed). It lives in a **separate repository** (`systemrs/systemrs-systemc`) depending one-way on `systemrs`, vendoring/building SystemC itself — so the core stays pure Rust with no C++ toolchain, CMake, or `cosim` feature, and the same separate-repo discipline as `qfixed` and the modeling skill applies. `systemrs` provides only the **pure-Rust seam** the bridge plugs into: a swappable `Rc<RefCell<dyn FwTransport>>` forward-transport target (`TargetSocket::set_fw_transport`), the generic-payload byte API for marshaling, and the public `Ctx`/process model. The phase plan, marshaling, and the symmetric panic/exception firewall below all hold — they are now the *bridge's* implementation against that seam.
+
 ### 11.1 The governing constraint: there can be only one scheduler
 
 Every kernel finding converges on one fact: SystemC is cooperatively single-threaded by construction, and each kernel owns its own `m_curr_time`, delta counters, and notification queues. Two live schedulers cannot share one logical timeline without an explicit synchronization protocol. This dictates the design space:

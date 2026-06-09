@@ -80,14 +80,23 @@ Because of this, **CI tasks must invoke the commands defined in `scripts/`, neve
   to the GitHub workflow or only to a recipe — keep `scripts/` authoritative so local and CI stay
   identical. The MSRV (`scripts/msrv.sh`) is derived from `rust-version` in `Cargo.toml`, not pinned.
 
-### SystemC co-simulation (`cosim` feature)
+### SystemC interop — a separate bridge repo, not an in-tree crate
 
-`systemrs-ffi` bridges to C++ SystemC via `cxx` over a de-templated C++ shim, built against
-`external/systemc`. This path is **feature-gated** and needs a C++ toolchain + CMake (both present
-in the devcontainer). It is off by default — only enable `cosim` when `external/systemc` is
-present, e.g. `cargo test -p systemrs-examples --features cosim`. Do not enable
-`rust-analyzer.cargo.features = "all"`, as that would try to build the FFI/SystemC path
-unconditionally.
+**This repo stays pure Rust: no C++ build, no CMake, no `cosim` feature, no `systemrs-ffi`
+crate.** (This revises design §10/§11, which originally listed `systemrs-ffi` as an
+in-workspace crate.) SystemC co-simulation lives in a **separate org repo** (e.g.
+`systemrs/systemrs-systemc`) that depends on `systemrs` and vendors/builds SystemC itself —
+the same separate-repo discipline used for `qfixed` and the modeling skill. The dependency
+direction is one-way (bridge → `systemrs`), so the core never inherits a foreign toolchain.
+
+The bridge plugs into a **pure-Rust seam** the core already provides: a target's forward
+transport is a swappable `Rc<RefCell<dyn FwTransport>>` (`TargetSocket::set_fw_transport`),
+so a bridge implements `FwTransport` by trampolining each call into the C++ kernel; the
+generic payload's public byte API is the marshaling boundary; the panic/exception firewall
+is the bridge's to enforce at its own `extern "C"` entries. The vendored
+[`external/systemc/`](external/) tree remains a **behavioural-fidelity reference** for
+porting (gitignored), not a build input here — the bridge repo is where it is actually
+compiled.
 
 ## Architecture — the load-bearing invariants
 
@@ -131,15 +140,19 @@ These constraints are *why* the design is the way it is. Violating them breaks t
   never a long-lived `&T` into a mutated signal. The primary sink is transaction-centric; VCD/FST
   are optional backends; telemetry I/O is pushed to a writer thread.
 
-- **Interop is phased** (§11). Phase 1 (first deliverable): Rust models run as *guests inside the
-  C++ SystemC kernel* via `cxx`. Phase 2: C++ guests inside the Rust kernel once it is bit-faithful.
-  Phase 3: out-of-process quantum-synchronized co-sim. Two live kernels in one process is rejected.
-  The Rust↔C++ panic/exception firewall is **symmetric** (§11.2, §11.6): Rust panics are caught at
-  every Rust `extern "C"` entry (`catch_unwind` → `SC_REPORT_FATAL`) — an escaping panic can land on
-  a *suspended coroutine frame* of another process — *and* the C++ shim must `try`/`catch (...)`
-  around every `sc_wait`/`b_transport`/`nb_transport_*` that re-enters Rust. That C++→Rust direction
-  is the "under-covered" one: a C++ throw originates *below* the Rust entry, so `catch_unwind` does
-  not cover it.
+- **Interop is phased, and lives in a separate bridge repo** (§11; revised packaging — see
+  "SystemC interop" above). This repo provides only the **pure-Rust seam** an external bridge
+  plugs into: the swappable `Rc<RefCell<dyn FwTransport>>` forward-transport target
+  (`TargetSocket::set_fw_transport`) and the generic-payload byte API. The bridge (its own repo)
+  does Phase 1 (Rust models as *guests inside the C++ SystemC kernel* via `cxx`), later Phase 2
+  (C++ guests in the Rust kernel) and Phase 3 (out-of-process quantum-synchronized co-sim); two
+  live kernels in one process is rejected. The Rust↔C++ panic/exception firewall is **symmetric**
+  (§11.2, §11.6) and is the *bridge's* responsibility: Rust panics caught at every Rust
+  `extern "C"` entry (`catch_unwind` → `SC_REPORT_FATAL`) — an escaping panic can land on a
+  *suspended coroutine frame* of another process — *and* the C++ shim must `try`/`catch (...)`
+  around every `sc_wait`/`b_transport`/`nb_transport_*` that re-enters Rust (the "under-covered"
+  C++→Rust direction, since a C++ throw originates *below* the Rust entry where `catch_unwind`
+  cannot cover it).
 
 ## Crate structure (design doc §10)
 
@@ -156,12 +169,13 @@ A 15-crate workspace under `crates/`, layered acyclically (L0 lowest → L7 high
   transport, phases, DMI, sockets).
 - **L5:** `systemrs-tlm-utils` (quantum keeper, PEQs, convenience sockets, LT↔AT adapters),
   `systemrs-trace` (sampling, recorders, VCD/FST).
-- **L6:** `systemrs` (facade/prelude re-exporting the public API; depends on all except ffi/examples).
+- **L6:** `systemrs` (facade/prelude re-exporting the public API; depends on all except examples).
 - **L7:** `systemrs-pdes` (M7 Tier-1 conservative barrier-synchronous PDES: regions wrap Tier-0
   kernels, quantum-synchronized with deterministic cross-region exchange; the single audited
-  `unsafe impl Send` is gated behind the optional `rayon` feature), `systemrs-ffi` (C ABI /
-  `cxx` SystemC interop — still unbuilt), `systemrs-examples` (examples + cross-crate
-  conformance/integration tests; dev-deps `insta`, `criterion`).
+  `unsafe impl Send` is gated behind the optional `rayon` feature), `systemrs-examples` (examples +
+  cross-crate conformance/integration tests; dev-deps `insta`, `criterion`).
+  **SystemC interop (`systemrs-ffi`) is deliberately NOT a crate here** — it lives in a separate
+  bridge repo against the pure-Rust seam (see "SystemC interop" above).
 
 The proc-macro crate has no workspace deps and emits path-qualified `::systemrs::…` code so the
 facade re-exports macros without a dependency cycle.
@@ -174,7 +188,8 @@ facade re-exports macros without a dependency cycle.
   prefix on user-facing names (`Signal`, not `sc_signal`); the SystemC→SystemRS map is design
   doc §14.
 - **Lints (workspace-level):** `clippy::all` + `clippy::pedantic` = warn; `missing_docs` = warn;
-  `unsafe_code = "warn"`, allowed only in `systemrs-ffi`/`systemrs-runtime` and only with a
+  `unsafe_code = "warn"`, allowed only in `systemrs-runtime` and `systemrs-pdes` (the latter
+  feature-gated behind `rayon`) and only with a
   `// SAFETY:` comment. `cargo-deny` gates licenses/advisories/duplicate versions.
 - Shared deps go in `[workspace.dependencies]`; add new deps with `default-features = false` and
   only the features you need (see the Rust skill).

@@ -51,11 +51,12 @@ The load-bearing invariants from the design are reproduced and tested:
   the synchronous core is `Rc`/`RefCell`/`Cell`, never `Arc`/`Mutex`.
 - **Deterministic tie-breaks**: equal-time events ordered by insertion sequence.
 
-Deferred per the roadmap (design §12, M4+): the AT four-phase non-blocking
-protocol and PEQs, temporal-decoupling quantum keeper, TLM-1 analysis ports, the
-tracing/VCD backends, the `#[module]` proc-macro, the SystemC `cxx` co-simulation
-bridge, and the parallel (PDES) region orchestrator. The crate seams are designed
-so these slot in without disturbing model-author code.
+The roadmap MVP (M0–M6) plus M7's parallel PDES tier and bounded snapshot/restore are
+built. **SystemC co-simulation is deliberately out-of-tree**: this repo stays pure Rust
+and exposes a generic seam — a swappable `Rc<dyn FwTransport>` forward-transport target
+(`TargetSocket::set_fw_transport`) plus the generic-payload byte API — that a **separate
+bridge repo** (depending on `systemrs`, vendoring/building SystemC via `cxx`) plugs into.
+So the core never inherits a C++ toolchain; see the design doc §11.
 
 ## Examples
 
@@ -121,8 +122,9 @@ build-verification sequence. The GitHub Actions workflow
 ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) mirrors it, adding the MSRV
 leg (`just msrv`), so **a green `just ci` locally means a green CI.**
 
-The optional SystemC co-simulation path (`cosim` feature) is not yet wired up; it
-will require `external/systemc` and a C++ toolchain (see the design doc §11).
+SystemC co-simulation lives in a **separate bridge repo** (not this workspace), so this
+repo's CI needs no C++ toolchain; the bridge plugs into the pure-Rust `FwTransport` seam
+(see the design doc §11).
 
 ## License
 

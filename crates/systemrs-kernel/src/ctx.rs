@@ -252,6 +252,49 @@ impl Ctx {
         pid
     }
 
+    // ---- Process control (kill) ----------------------------------------------
+
+    /// Kills a process: marks it dead so it never runs again, invalidates any pending
+    /// timeout, and — for a parked `SC_THREAD` — **force-unwinds its coroutine stack,
+    /// running its destructors**. This is the throw/unwind kill semantics of SystemC's
+    /// `kill()` (`doc/systemrs-design.md` §6a), upgrading the kernel's prior
+    /// cooperative-only cancellation.
+    ///
+    /// A method has no stack to unwind, so it is simply marked dead. Killing the
+    /// *currently running* process marks it dead (its body finishes the current
+    /// activation, then is reaped at teardown) rather than unwinding the live stack;
+    /// killing any other, parked process unwinds it immediately. Already-dead or unknown
+    /// process ids are a no-op.
+    ///
+    /// # Arguments
+    ///
+    /// * `pid` - The process to kill.
+    pub fn kill(&self, pid: ProcId) {
+        // Take the parked fiber out under the borrow, then drop it *after* releasing the
+        // borrow: the force-unwind runs the victim's destructors (on the victim's own
+        // stack), which may legitimately touch the kernel.
+        let fiber = {
+            let mut g = self.inner.borrow_mut();
+            let Some(p) = g.procs.get_mut(pid) else {
+                return;
+            };
+            if p.dead {
+                return;
+            }
+            p.dead = true;
+            p.wait_gen += 1; // invalidate any pending timed wake
+            p.wait = WaitState::Static;
+            p.queued = false;
+            match &mut p.body {
+                // `running` has its fiber taken out already, so this yields `None` for a
+                // self-kill (no live-stack unwind); a parked victim's fiber is taken here.
+                ProcessBody::Thread(slot) => slot.take(),
+                ProcessBody::Method(_) => None,
+            }
+        };
+        drop(fiber);
+    }
+
     // ---- Method next-trigger (no suspend) ------------------------------------
 
     /// Sets the running method's sensitivity for its next invocation to a relative
@@ -293,5 +336,50 @@ impl Ctx {
     pub fn service<T: Any>(&self) -> Rc<T> {
         self.try_service::<T>()
             .expect("requested service is not registered")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    use systemrs_time::SimTime;
+
+    use crate::Sim;
+
+    /// `kill` force-unwinds a parked thread's stack, running its destructors (the
+    /// throw/unwind kill semantics, not just a cooperative dead flag).
+    #[test]
+    fn kill_force_unwinds_a_parked_thread() {
+        struct Guard(Arc<AtomicBool>);
+        impl Drop for Guard {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::Relaxed);
+            }
+        }
+
+        let sim = Sim::new();
+        let dropped = Arc::new(AtomicBool::new(false));
+
+        let d = Arc::clone(&dropped);
+        let victim = sim.add_thread("victim", &[], true, move |cx| {
+            // The guard is held across the wait, so its destructor runs only if the
+            // stack is unwound (it would not run if the body simply never resumed).
+            let _guard = Guard(d);
+            cx.wait(SimTime::from_ns(100));
+            unreachable!("the victim is killed before its wait elapses");
+        });
+
+        sim.add_thread("killer", &[], true, move |cx| {
+            cx.wait(SimTime::from_ns(10));
+            cx.kill(victim); // the victim is parked at wait(100): force-unwind it now
+        });
+
+        sim.run_until(SimTime::from_ns(50));
+        assert!(
+            dropped.load(Ordering::Relaxed),
+            "kill must force-unwind the victim, running its Drop"
+        );
     }
 }
