@@ -1,5 +1,10 @@
 # systemrs
 
+[![crates.io](https://img.shields.io/crates/v/systemrs.svg?logo=rust)](https://crates.io/crates/systemrs)
+[![docs.rs](https://img.shields.io/docsrs/systemrs?logo=docsdotrs)](https://docs.rs/systemrs)
+[![CI](https://github.com/systemrs/systemrs/actions/workflows/ci.yml/badge.svg)](https://github.com/systemrs/systemrs/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/crates/l/systemrs.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
 **SystemRS** is a Rust re-implementation of SystemC's modeling substrate, restricted to the
 transaction-level modeling (TLM) subset and oriented toward long-lived, observable digital twins.
 It is *not* an RTL simulator.
@@ -20,7 +25,9 @@ cargo add systemrs
 
 ## Documentation
 
-- API docs: <https://docs.rs/systemrs>
+- **User guide** (tutorial, example-driven) and the rendered **API reference**, published to
+  GitHub Pages: <https://systemrs.github.io/systemrs/>
+- API docs for this crate on docs.rs: <https://docs.rs/systemrs>
 - Design report:
   <https://github.com/systemrs/systemrs/blob/master/doc/systemrs-design.md>
 
