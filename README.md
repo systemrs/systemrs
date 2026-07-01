@@ -1,5 +1,12 @@
 # SystemRS
 
+[![CI](https://github.com/systemrs/systemrs/actions/workflows/ci.yml/badge.svg)](https://github.com/systemrs/systemrs/actions/workflows/ci.yml)
+[![Docs site](https://github.com/systemrs/systemrs/actions/workflows/pages.yml/badge.svg)](https://systemrs.github.io/systemrs/)
+[![crates.io](https://img.shields.io/crates/v/systemrs.svg?logo=rust)](https://crates.io/crates/systemrs)
+[![docs.rs](https://img.shields.io/docsrs/systemrs?logo=docsdotrs)](https://docs.rs/systemrs)
+[![MSRV](https://img.shields.io/crates/msrv/systemrs.svg?logo=rust)](https://www.rust-lang.org)
+[![License: Apache-2.0](https://img.shields.io/crates/l/systemrs.svg)](LICENSE-APACHE)
+
 A Rust, **TLM-only** equivalent of SystemC for transaction-level digital twins.
 
 SystemRS reproduces the parts of SystemC and TLM-2.0 needed to author digital
@@ -13,8 +20,8 @@ of RTTI.
 The authoritative specification is [doc/systemrs-design.md](doc/systemrs-design.md).
 For a tutorial, example-driven introduction, see the **user guide** in
 [`doc/guide/`](doc/guide/) (`just book`, then `mdbook serve doc/guide` to read it
-locally). Once GitHub Pages is enabled, the guide and the API reference publish to
-`https://systemrs.github.io/systemrs/` (`just site` assembles that bundle locally). It is
+locally). The guide and the API reference are published to
+<https://systemrs.github.io/systemrs/> (`just site` assembles that bundle locally). It is
 **not** an RTL
 simulator: the `sc_dt` numeric library, resolved multi-driver signals, and clocked
 threads (`SC_CTHREAD`) are out of scope.
