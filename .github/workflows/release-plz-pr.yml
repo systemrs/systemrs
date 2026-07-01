@@ -25,9 +25,13 @@ jobs:
       # A GitHub App token (short-lived, minted per run) so the release PR triggers CI —
       # the default GITHUB_TOKEN would not. The App is repo-scoped (contents + PRs) and
       # cannot publish to crates.io; the publish credential stays OIDC-only.
+      # When the App credentials are not yet configured the step is skipped and the
+      # workflow falls back to the built-in GITHUB_TOKEN (release PRs won't re-trigger
+      # CI in that case, but the workflow itself will not fail).
       - name: Mint release-plz app token
         uses: actions/create-github-app-token@v3
         id: app-token
+        if: vars.RELEASE_PLZ_APP_CLIENT_ID != ''
         with:
           client-id: ${{ vars.RELEASE_PLZ_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_PLZ_APP_KEY }}
@@ -35,7 +39,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ steps.app-token.outputs.token || github.token }}
 
       # release-plz runs cargo-semver-checks while preparing the PR.
       - uses: taiki-e/install-action@v2
@@ -47,4 +51,4 @@ jobs:
         with:
           command: release-pr
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
