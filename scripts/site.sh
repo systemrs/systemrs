@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Assemble the public documentation site for GitHub Pages: the user guide(s) (mdBook)
 # plus the public API reference (rustdoc), under one project site served at
-# https://londey.github.io/systemrs/. The site is built into target/site/ and uploaded
+# https://systemrs.github.io/systemrs/. The site is built into target/site/ and uploaded
 # by the Pages workflow as an artifact — nothing built is ever committed. Run
 # `just site`, then open target/site/index.html (or serve target/site/) to preview
 # exactly what CI publishes.
@@ -63,7 +63,7 @@ cat >"$out/index.html" <<'HTML'
   <li><a href="api/">API Reference</a>
     <span class="desc">The rustdoc for the public API.</span></li>
 </ul>
-<p><a href="https://github.com/londey/systemrs">Source on GitHub</a></p>
+<p><a href="https://github.com/systemrs/systemrs">Source on GitHub</a></p>
 </body>
 </html>
 HTML

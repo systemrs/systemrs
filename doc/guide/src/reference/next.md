@@ -52,4 +52,4 @@ to model and observe a digital system as a twin, and the reference a parallel ru
 verified against.
 
 [`systemrs-modeling` skill]: https://github.com/systemrs/systemrs-modeling-skill
-[`doc/systemrs-design.md`]: https://github.com/londey/systemrs/blob/master/doc/systemrs-design.md
+[`doc/systemrs-design.md`]: https://github.com/systemrs/systemrs/blob/master/doc/systemrs-design.md

@@ -22,7 +22,7 @@ cargo add systemrs
 
 - API docs: <https://docs.rs/systemrs>
 - Design report:
-  <https://github.com/londey/systemrs/blob/master/doc/systemrs-design.md>
+  <https://github.com/systemrs/systemrs/blob/master/doc/systemrs-design.md>
 
 ## License
 

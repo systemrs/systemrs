@@ -18,7 +18,7 @@ edition = "2024"
 [output.html]
 default-theme = "rust"
 preferred-dark-theme = "ayu"
-git-repository-url = "https://github.com/londey/systemrs"
-# Served under a subpath on GitHub Pages (https://londey.github.io/systemrs/guide/);
+git-repository-url = "https://github.com/systemrs/systemrs"
+# Served under a subpath on GitHub Pages (https://systemrs.github.io/systemrs/guide/);
 # site-url lets the 404 page load its assets correctly. Internal links stay relative.
 site-url = "/systemrs/guide/"

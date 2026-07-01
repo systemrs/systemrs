@@ -37,6 +37,6 @@ verbatim from a compiled, tested file):
 - **Reference** — the architecture, the SystemC map, and the determinism guarantees.
 
 Each chapter ends with a "go deeper" pointer into the authoritative
-[design report](https://github.com/londey/systemrs/blob/master/doc/systemrs-design.md),
+[design report](https://github.com/systemrs/systemrs/blob/master/doc/systemrs-design.md),
 whose section numbers (`§…`) are cited throughout. The full API reference lives in the
 rustdoc (`cargo doc --open`).

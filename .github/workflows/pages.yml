@@ -5,7 +5,7 @@
 # Pages artifact. No build output is ever committed to the repository.
 #
 # One-time setup (a human, once): Settings -> Pages -> Source = "GitHub Actions".
-# (Or via the REST API: `gh api -X PUT repos/londey/systemrs/pages -f build_type=workflow`.)
+# (Or via the REST API: `gh api -X PUT repos/systemrs/systemrs/pages -f build_type=workflow`.)
 name: Pages
 
 on:

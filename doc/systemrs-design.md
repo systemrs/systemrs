@@ -1193,7 +1193,7 @@ version      = "0.1.0"
 edition      = "2024"
 rust-version = "1.90"               # MSRV; CI also tests current stable
 license      = "Apache-2.0"          # match SystemC's Apache-2.0 lineage
-repository   = "https://github.com/londey/systemrs"
+repository   = "https://github.com/systemrs/systemrs"
 authors      = ["Nicholas Londey <londey@gmail.com>"]
 
 [workspace.dependencies]
