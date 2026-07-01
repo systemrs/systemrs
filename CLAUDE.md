@@ -197,10 +197,22 @@ facade re-exports macros without a dependency cycle.
 ## Releasing (crates.io) — rules that keep versioning correct
 
 The workspace publishes all 14 crates (everything except `systemrs-examples`, which is
-`publish = false`) to crates.io. Versioning and publishing are **automated by `release-plz`**
+`publish = false`) to crates.io — **all 14 are live at `0.1.0` (as of 2026-07); the one-time
+bootstrap publish is done.** From here on **every release is PR-based via `release-plz`**
 ([`release-plz.toml`](release-plz.toml)); the mechanics are token-free and hardware-gated. When
 touching public APIs, commits, or the release setup, follow these:
 
+- **A release is cut by merging the auto-maintained *Release PR* — never by hand-publishing or
+  hand-bumping.** You land ordinary Conventional-Commit changes on `master`;
+  [`release-plz-pr.yml`](.github/workflows/release-plz-pr.yml) then opens/updates one standing
+  "Release" PR that bumps `[workspace.package].version`, regenerates every `CHANGELOG.md`, and runs
+  `cargo-semver-checks`. Merging *that* PR triggers
+  [`release-plz.yml`](.github/workflows/release-plz.yml), which **pauses on the `crates-io-publish`
+  environment for YubiKey approval** before publishing all 14 crates in dependency order. So a
+  release is: land the change → merge the Release PR → approve. **Claude's job stops at landing the
+  content change** (e.g. a `docs:`/`fix:` commit, on a branch, via a normal PR); it does not bump
+  versions, merge the Release PR, or publish. A crates.io-facing edit (e.g. a crate `README.md`) only
+  reaches crates.io once this flow republishes that crate — so such a change needs its own release.
 - **Commits MUST follow [Conventional Commits](https://www.conventionalcommits.org/)** — `feat:`,
   `fix:`, `docs:`, `refactor:`, etc. release-plz derives the SemVer bump from them, so a wrong
   prefix produces a wrong version. CI enforces this on PRs (`just commit-lint` →
@@ -209,7 +221,8 @@ touching public APIs, commits, or the release setup, follow these:
   `BREAKING CHANGE:` footer. Under 0.x SemVer a breaking change bumps the **minor** (`0.1 → 0.2`);
   a compatible feature bumps the **patch**. `cargo-semver-checks` is the backstop — run
   **`just semver-checks`** ([`scripts/semver-checks.sh`](scripts/semver-checks.sh)) before proposing
-  a release; CI runs it too. It is a no-op until the first crate is published, then a real gate.
+  a release; CI runs it too. Now that every crate is published it is a **live gate** (it was a no-op
+  only before the first publish).
 - **Never hand-edit crate `version` fields.** Versioning is **lockstep** via
   `version.workspace = true`; the single source of truth is `[workspace.package].version`, and
   release-plz owns bumping it. Do not bump versions in a normal PR.
@@ -218,11 +231,11 @@ touching public APIs, commits, or the release setup, follow these:
 - **New publishable crate?** Add `description` + inherited `homepage`/`keywords`/`categories`, a
   per-crate `README.md` with `readme = "README.md"`, and register a crates.io Trusted Publisher for
   it. New non-published crate → set `publish = false`.
-- **Publishing is out of Claude's hands.** Releases go through the `crates-io-publish` GitHub
-  Environment (manual approval, backed by the maintainer's YubiKey) and crates.io Trusted Publishing
-  (short-lived OIDC token — no stored `CARGO_REGISTRY_TOKEN`). Claude must **not** run `cargo publish`
-  or attempt to publish; the flow is: merge the release-plz PR → maintainer approves the deployment.
-  See [`.github/workflows/release-plz.yml`](.github/workflows/release-plz.yml) and the release plan
+- **Publishing is out of Claude's hands.** The publish job authenticates via crates.io Trusted
+  Publishing (a short-lived OIDC token — no stored `CARGO_REGISTRY_TOKEN`) behind the
+  manual-approval, YubiKey-backed `crates-io-publish` Environment. Claude must **not** run
+  `cargo publish`, bump versions, or merge the Release PR — see the release-flow bullet above,
+  [`.github/workflows/release-plz.yml`](.github/workflows/release-plz.yml), and the release plan
   under `.claude/plans/`.
 
 ## Roadmap (design doc §12)
