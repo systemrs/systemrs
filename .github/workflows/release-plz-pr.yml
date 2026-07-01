@@ -1,0 +1,50 @@
+# Maintains the "Release" PR. On every push to master, release-plz opens/updates a PR
+# that bumps the shared workspace version, updates CHANGELOG.md, and runs
+# cargo-semver-checks. This job NEVER publishes: no crates.io credential, no protected
+# environment, no approval. Publishing happens later in release-plz.yml, after the PR is
+# merged and you approve the deployment.
+name: Release PR
+
+on:
+  push:
+    branches: [master]
+
+# Serialize release-PR updates; don't cancel an in-flight one.
+concurrency:
+  group: release-plz-pr
+  cancel-in-progress: false
+
+jobs:
+  release-pr:
+    name: Update release PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # A GitHub App token (short-lived, minted per run) so the release PR triggers CI —
+      # the default GITHUB_TOKEN would not. The App is repo-scoped (contents + PRs) and
+      # cannot publish to crates.io; the publish credential stays OIDC-only.
+      - name: Mint release-plz app token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.RELEASE_PLZ_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLZ_APP_KEY }}
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      # release-plz runs cargo-semver-checks while preparing the PR.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-semver-checks
+
+      - name: Update the release PR
+        uses: release-plz/action@v0
+        with:
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

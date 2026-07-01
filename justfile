@@ -74,6 +74,16 @@ deny *args:
 audit *args:
     scripts/audit.sh {{args}}
 
+# --- release gates (see scripts/ and CLAUDE.md "Releasing") ---
+
+# Detect SemVer-incompatible public-API changes vs the last crates.io release (cargo-semver-checks).
+semver-checks *args:
+    scripts/semver-checks.sh {{args}}
+
+# Check that commits follow Conventional Commits so release-plz can derive the version bump.
+commit-lint:
+    scripts/commit-lint.sh
+
 # --- aggregate ---
 
 # Run every CI quality check, in the project's build-verification order.

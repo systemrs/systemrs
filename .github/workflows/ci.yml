@@ -35,3 +35,38 @@ jobs:
       # installs that toolchain, so there is no version pinned here to drift.
       - name: Build & test on the MSRV
         run: scripts/msrv.sh
+
+  # SemVer gate: flag public-API changes that need a version bump. cargo-semver-checks
+  # compares against the last crates.io release and skips crates not yet published, so
+  # this is a no-op before the first release and a real gate after. Separate job (like
+  # msrv) because it needs its own tool and a published baseline, not part of `just ci`.
+  semver:
+    name: SemVer check (public API)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just,cargo-semver-checks
+      - name: Check for SemVer-incompatible API changes
+        run: just semver-checks
+
+  # Conventional Commits gate (PRs only): release-plz derives the version bump from
+  # commit subjects, so they must be well-formed. Needs full history to diff the range.
+  commit-lint:
+    name: Conventional Commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
+      - name: Check commit messages against the PR base
+        env:
+          BASE: origin/${{ github.base_ref }}
+        run: |
+          git fetch --quiet origin "${{ github.base_ref }}"
+          just commit-lint

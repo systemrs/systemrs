@@ -7,6 +7,10 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 
 [dependencies]
 systemrs-diag.workspace = true
@@ -32,3 +36,8 @@ pdes-rayon = ["systemrs-pdes/rayon"]
 
 [lints]
 workspace = true
+
+# Build docs.rs with the full feature surface, and gate feature-flagged docs on `docsrs`.
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

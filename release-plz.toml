@@ -1,0 +1,21 @@
+# release-plz configuration — https://release-plz.dev/docs/config
+#
+# Versioning is LOCKSTEP: every crate uses `version.workspace = true`, so the whole
+# workspace shares one version in `[workspace.package]`. release-plz detects the
+# workspace inheritance, derives the bump from Conventional Commits, and moves all
+# crates together. `systemrs-examples` is `publish = false` in its Cargo.toml, so
+# release-plz skips it automatically.
+#
+# The options below are release-plz's defaults, stated explicitly as documentation:
+[workspace]
+# Fail the release PR when a public-API change is SemVer-incompatible with the last
+# crates.io release (runs cargo-semver-checks; a break forces the correct bump).
+semver_check = true
+# Maintain CHANGELOG.md (root + per-crate) from Conventional Commits.
+changelog_update = true
+# On publish, create the git tag and a GitHub release.
+git_tag_enable = true
+git_release_enable = true
+# Publish to crates.io (the actual `cargo publish` is gated by the protected
+# `crates-io-publish` environment in .github/workflows/release-plz.yml).
+publish = true

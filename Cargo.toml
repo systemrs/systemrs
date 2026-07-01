@@ -32,7 +32,12 @@ edition = "2024"
 rust-version = "1.90"
 license = "Apache-2.0"
 repository = "https://github.com/londey/systemrs"
+homepage = "https://github.com/londey/systemrs"
 authors = ["Nicholas Londey <londey@gmail.com>"]
+# Inherited by every crate via `keywords.workspace = true` / `categories.workspace = true`.
+# crates.io caps keywords at 5 (<=20 chars each) and `categories` must be valid slugs.
+keywords = ["systemc", "tlm", "simulation", "modeling", "digital-twin"]
+categories = ["simulation", "development-tools"]
 
 [workspace.dependencies]
 # Internal crates (path + version per design §10.4).
