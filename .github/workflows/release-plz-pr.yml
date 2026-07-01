@@ -26,7 +26,7 @@ jobs:
       # the default GITHUB_TOKEN would not. The App is repo-scoped (contents + PRs) and
       # cannot publish to crates.io; the publish credential stays OIDC-only.
       - name: Mint release-plz app token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         id: app-token
         with:
           app-id: ${{ vars.RELEASE_PLZ_APP_ID }}
@@ -43,7 +43,7 @@ jobs:
           tool: cargo-semver-checks
 
       - name: Update the release PR
-        uses: release-plz/action@v0
+        uses: release-plz/action@v0.5
         with:
           command: release-pr
         env:

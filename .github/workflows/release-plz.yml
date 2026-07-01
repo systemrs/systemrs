@@ -59,7 +59,7 @@ jobs:
       id-token: write                # required to mint the crates.io OIDC token
     steps:
       - name: Mint release-plz app token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         id: app-token
         with:
           app-id: ${{ vars.RELEASE_PLZ_APP_ID }}
@@ -80,7 +80,7 @@ jobs:
         id: auth
 
       - name: Publish the workspace
-        uses: release-plz/action@v0
+        uses: release-plz/action@v0.5
         with:
           command: release
         env:
