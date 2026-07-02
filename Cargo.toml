@@ -27,7 +27,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.90"
 license = "Apache-2.0"
@@ -41,25 +41,25 @@ categories = ["simulation", "development-tools"]
 
 [workspace.dependencies]
 # Internal crates (path + version per design §10.4).
-systemrs-diag = { path = "crates/systemrs-diag", version = "0.1.0" }
-systemrs-time = { path = "crates/systemrs-time", version = "0.1.0" }
-systemrs-runtime = { path = "crates/systemrs-runtime", version = "0.1.0" }
-systemrs-kernel = { path = "crates/systemrs-kernel", version = "0.1.0" }
-systemrs-core = { path = "crates/systemrs-core", version = "0.1.0" }
-systemrs-channels = { path = "crates/systemrs-channels", version = "0.1.0" }
-systemrs-tlm1 = { path = "crates/systemrs-tlm1", version = "0.1.0" }
-systemrs-tlm2 = { path = "crates/systemrs-tlm2", version = "0.1.0" }
-systemrs-tlm-utils = { path = "crates/systemrs-tlm-utils", version = "0.1.0" }
-systemrs-trace = { path = "crates/systemrs-trace", version = "0.1.0" }
-systemrs-twin = { path = "crates/systemrs-twin", version = "0.1.0" }
-systemrs-pdes = { path = "crates/systemrs-pdes", version = "0.1.0" }
+systemrs-diag = { path = "crates/systemrs-diag", version = "0.1.1" }
+systemrs-time = { path = "crates/systemrs-time", version = "0.1.1" }
+systemrs-runtime = { path = "crates/systemrs-runtime", version = "0.1.1" }
+systemrs-kernel = { path = "crates/systemrs-kernel", version = "0.1.1" }
+systemrs-core = { path = "crates/systemrs-core", version = "0.1.1" }
+systemrs-channels = { path = "crates/systemrs-channels", version = "0.1.1" }
+systemrs-tlm1 = { path = "crates/systemrs-tlm1", version = "0.1.1" }
+systemrs-tlm2 = { path = "crates/systemrs-tlm2", version = "0.1.1" }
+systemrs-tlm-utils = { path = "crates/systemrs-tlm-utils", version = "0.1.1" }
+systemrs-trace = { path = "crates/systemrs-trace", version = "0.1.1" }
+systemrs-twin = { path = "crates/systemrs-twin", version = "0.1.1" }
+systemrs-pdes = { path = "crates/systemrs-pdes", version = "0.1.1" }
 
 # External: bit-accurate fixed-point (Q-notation) for the DSP examples. SystemRS
 # deliberately drops `sc_dt` (design §3.12) — models bring their own datatypes and
 # the generic payload carries the bytes; `qfixed` demonstrates exactly that.
 qfixed = { git = "https://github.com/systemrs/qfixed.git" }
-systemrs-macros = { path = "crates/systemrs-macros", version = "0.1.0" }
-systemrs = { path = "crates/systemrs", version = "0.1.0" }
+systemrs-macros = { path = "crates/systemrs-macros", version = "0.1.1" }
+systemrs = { path = "crates/systemrs", version = "0.1.1" }
 
 # External crates, default-features off per the Rust skill.
 slotmap = { version = "1", default-features = false }

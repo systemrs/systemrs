@@ -138,7 +138,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "systemrs-channels",
  "systemrs-core",
@@ -156,7 +156,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs-channels"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "systemrs-core",
  "systemrs-diag",
@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "slotmap",
  "systemrs-diag",
@@ -176,14 +176,14 @@ dependencies = [
 
 [[package]]
 name = "systemrs-diag"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "thiserror",
 ]
 
 [[package]]
 name = "systemrs-examples"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "qfixed",
  "systemrs",
@@ -191,7 +191,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs-kernel"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "slotmap",
  "systemrs-diag",
@@ -201,7 +201,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs-macros"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -210,7 +210,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs-pdes"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rayon",
  "systemrs-diag",
@@ -221,21 +221,21 @@ dependencies = [
 
 [[package]]
 name = "systemrs-runtime"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "corosensei",
 ]
 
 [[package]]
 name = "systemrs-time"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "systemrs-diag",
 ]
 
 [[package]]
 name = "systemrs-tlm-utils"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "systemrs-channels",
  "systemrs-core",
@@ -247,7 +247,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs-tlm1"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "systemrs-kernel",
  "systemrs-time",
@@ -255,7 +255,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs-tlm2"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "systemrs-channels",
  "systemrs-core",
@@ -266,7 +266,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs-trace"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "systemrs-channels",
  "systemrs-kernel",
@@ -276,7 +276,7 @@ dependencies = [
 
 [[package]]
 name = "systemrs-twin"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "systemrs-kernel",
  "systemrs-time",

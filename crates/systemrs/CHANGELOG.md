@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/systemrs/systemrs/compare/systemrs-v0.1.0...systemrs-v0.1.1) - 2026-07-02
+
+### Other
+
+- *(readme)* link published user guide and add CI/crates.io/docs.rs badges
+
 ## [0.1.0](https://github.com/systemrs/systemrs/releases/tag/systemrs-v0.1.0) - 2026-07-01
 
 ### Added
