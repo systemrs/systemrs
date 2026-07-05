@@ -76,7 +76,8 @@ dependencies = [
 [[package]]
 name = "qfixed"
 version = "0.1.0"
-source = "git+https://github.com/systemrs/qfixed.git#fe292eaf4a82e5b81848f97455a208162d7f4007"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3ea4a17db15f92872a4560b334d5af735d9d8aec52c6d20137aaf44bb19d2e6"
 dependencies = [
  "typenum",
 ]

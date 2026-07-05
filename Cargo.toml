@@ -57,7 +57,7 @@ systemrs-pdes = { path = "crates/systemrs-pdes", version = "0.1.1" }
 # External: bit-accurate fixed-point (Q-notation) for the DSP examples. SystemRS
 # deliberately drops `sc_dt` (design §3.12) — models bring their own datatypes and
 # the generic payload carries the bytes; `qfixed` demonstrates exactly that.
-qfixed = { git = "https://github.com/systemrs/qfixed.git" }
+qfixed = { version = "0.1", default-features = false }
 systemrs-macros = { path = "crates/systemrs-macros", version = "0.1.1" }
 systemrs = { path = "crates/systemrs", version = "0.1.1" }
 

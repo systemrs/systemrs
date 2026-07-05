@@ -26,6 +26,3 @@ wildcards = "allow"
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
-# The DSP examples depend on the SystemRS-org `qfixed` (bit-accurate fixed-point);
-# allow that one git org until it is published to crates.io.
-allow-org = { github = ["systemrs"] }
